@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chapter.title }} - Comic Vault</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chapter.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Includi jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Includi Slick Carousel CSS e JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="nav-icon">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="title">{{ chapter.title }}</div>
+        </div>
+        <div class="nav-icons">
+            <a href="{{ url_for('view_chapter', comic_id=comic._id, chapter_number=(chapter.number-1)) }}"><i class="fa-solid fa-backward"></i></a>
+            <a href="{{ url_for('view_chapter', comic_id=comic._id, chapter_number=(chapter.number+1)) }}"><i class="fa-solid fa-forward"></i></a>
+            <a href="{{ url_for('view_comic', comic_id=comic._id, page_number=page) }}"><i class="fa-solid fa-arrow-left"></i></a>
+            <a href="#"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div>
+            <a href="{{ url_for('index')}}"><i class="fa-solid fa-house"></i></a>
+            <a href="#"><i class="fa-solid fa-book-open"></i></a>
+            <a href="#"><i class="fa-solid fa-magnifying-glass fa-rotate-90"></i></a>
+            <a href="#"><i class="fa-solid fa-sliders fa-rotate-90"></i></a>
+        </div>
+        <a href="#"><i class="fa-solid fa-gear"></i></a>
+    </div>
+    <div class="content">
+		<div class="carousel">
+			<div class="carousel-inner" dir="rtl">
+				{% for page_number in range(images) %}
+                    <div class="carousel-item">
+                        <img src="{{ url_for('view_page', comic_id=comic._id, chapter_number=chapter.number, page_number=page_number) }}" alt="Page {{ page_number + 1 }}">
+                    </div>
+                {% endfor %}
+			</div>
+		</div>
+	</div>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/chapter.js') }}"></script>
+
+    <script>
+        $(document).ready(function(){
+	        $('.carousel-inner').slick({
+                dots: true,
+                autoplay: false,
+                arrows: false,
+                rtl: true,
+                infinite: false,
+                adaptiveHeight: false,
+            });
+        })
+    </script>
+
+    
+</body>
+</html>

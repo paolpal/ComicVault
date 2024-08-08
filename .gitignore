@@ -1,0 +1,32 @@
+# Ambiente virtuale
+venv/
+
+# File di configurazione per sistemi operativi
+*.DS_Store
+Thumbs.db
+
+# File di log
+*.log
+
+# File di configurazione dell'IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# File di compilazione temporanei
+__pycache__/
+*.py[cod]
+*$py.class
+
+# File temporanei di editor
+*~
+*.swp
+
+# File di configurazione locali (es. database o credenziali)
+config.py
+
+# Cartelle di cache
+.cache/
+.mypy_cache/
+

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ comic.title }} - Comic Vault</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/comic.css') }}">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="nav-icon">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="title">{{ comic.title }}</div>
+        </div>
+        <div class="nav-icons">
+            <!--NAVIGAZIONE-->
+            {% if page_number > 3 %}
+                <a href="{{ url_for('view_comic', comic_id=comic['_id']) }}"><i>1</i></a>
+                {% if page_number >= 5 %}
+                    <a href="#"><i>...</i></a>
+                {% endif %}
+            {% endif %}
+
+            {% for page in range(page_number - 2, page_number + 3) %}
+                {% if page >= 1 and page <= total_pages %}
+                    <a href="{{ url_for('view_comic', comic_id=comic['_id'], page_number=page) }}"><i{% if page == page_number %} class="active"{% endif %}>{{ page }}</i></a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_number < total_pages - 2 %}
+                {% if page_number <= total_pages - 4 %}
+                    <a href="#"><i>...</i></a>
+                {% endif %}
+                <a href="{{ url_for('view_comic', comic_id=comic['_id'], page_number=total_pages) }}"><i>{{ total_pages }}</i></a>
+            {% endif %}
+            <!--FINE NAVIGAZIONE-->
+            <a href="{{ url_for('index')}}"><i class="fa-solid fa-arrow-left"></i></a>
+            <a href="#"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div>
+            <a href="{{ url_for('index')}}"><i class="fa-solid fa-house"></i></a>
+            <a href="#"><i class="fa-solid fa-book-open"></i></a>
+            <a href="#"><i class="fa-solid fa-magnifying-glass fa-rotate-90"></i></a>
+            <a href="#"><i class="fa-solid fa-sliders fa-rotate-90"></i></a>
+        </div>
+        <a href="#"><i class="fa-solid fa-gear"></i></a>
+    </div>
+    <div class="content">
+        <div class="comic-header">
+			<img src="{{ comic['image'] if comic['image'] else url_for('static', filename='images/comic.jpg') }}" alt="{{ comic['alt'] }}">
+            <div class="comic-details">
+                <div class="comic-title">{{ comic.title }}</div>
+                <div class="comic-meta">
+                    <p>Author: {{ comic.author }}</p>
+                    <p>Publisher: {{ comic.publisher }}</p>
+                    <p>Issues: {{ comic.issues }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="chapter-list">
+            {% for chapter in chapters %}
+				<div class="chapter">
+					<a href="{{ url_for('view_chapter', comic_id=comic._id, chapter_number=chapter.number) }}">
+						<img src="{{ url_for('view_cover', comic_id=comic._id, chapter_number=chapter.number) }}" alt="Cover">
+						<div class="chapter-title">{{ chapter.title }}</div>
+						<div class="chapter-meta">Capitolo {{ chapter.number }}</div>
+					</a>
+				</div>
+			{% endfor %}
+            <!-- Aggiungere altri capitoli come necessario -->
+        </div>
+    </div>
+</body>
+</html>

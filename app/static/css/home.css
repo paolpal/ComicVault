@@ -1,0 +1,128 @@
+html {
+	margin: 0;
+	height: 100%;
+}
+body {
+	margin: 0;
+	font-family: Arial, sans-serif;
+	color: white;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 1)),
+				url('/static/images/comic-background.webp') no-repeat center center fixed;
+	background-size: cover;
+	background-attachment: fixed;
+}
+.navbar, .sidebar, .top-right {
+	background-color: rgba(27, 27, 27, 0.9);
+}
+.navbar {
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0;
+	position: fixed;
+	width: 100%;
+	top: 0;
+	left: 0;
+	box-sizing: border-box;
+}
+.navbar .nav-left {
+	display: flex;
+	align-items: center;
+}
+.navbar .nav-icon {
+	width: 60px;
+	height: 60px;
+	background-color: red;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.navbar .title {
+	font-size: 24px;
+	padding-left: 20px;
+}
+.navbar .nav-icons {
+	display: flex;
+	align-items: center;
+}
+.navbar .nav-icons i {
+	width: 60px;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: white;
+	text-decoration: none;
+}
+.navbar .nav-icons i:hover {
+	background-color: #8c0001; /* porpora */
+}
+.sidebar {
+	width: 60px;
+	position: fixed;
+	height: calc(100% - 60px);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	top: 60px;
+	justify-content: space-between;
+	padding-bottom: 20px;
+}
+.sidebar a {
+	width: 60px;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	text-decoration: none;
+}
+.sidebar a:hover {
+	background-color: #8c0001; /* porpora */
+}
+.content {
+	margin-left: 60px;
+	margin-top: 60px;
+	padding: 20px;
+}
+.header {
+	font-size: 24px;
+	margin-bottom: 20px;
+}
+.comics-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+.comic {
+	padding: 10px;
+	border-radius: 5px;
+	text-align: left;
+	width: fit-content;
+	max-width: 150px;
+}
+.comic a {
+	color: white;
+	text-decoration: none;
+}
+.comic img {
+	max-width: 100%;
+	border-radius: 5px;
+}
+.comic-title {
+	margin-top: 10px;
+	font-size: 14px;
+}
+.comic-meta {
+	font-size: 12px;
+	color: #999;
+}
+.top-right {
+	display: flex;
+	align-items: center;
+	position: absolute;
+	top: 0;
+	right: 0;
+}

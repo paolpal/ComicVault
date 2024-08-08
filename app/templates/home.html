@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comic Vault</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="nav-icon">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="title">Library</div>
+        </div>
+        <div class="nav-icons">
+            <a href="{{ url_for('scan_comics')}}"><i class="fa-solid fa-rotate"></i></a>
+            <a href="#"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div>
+            <a href="{{ url_for('index')}}"><i class="fa-solid fa-house"></i></a>
+            <a href="#"><i class="fa-solid fa-book-open"></i></a>
+            <a href="#"><i class="fa-solid fa-magnifying-glass fa-rotate-90"></i></a>
+            <a href="#"><i class="fa-solid fa-sliders fa-rotate-90"></i></a>
+        </div>
+        <a href="#"><i class="fa-solid fa-gear"></i></a>
+    </div>
+    <div class="content">
+        <div class="comics-grid">
+            {% for comic in comics %}
+            <div class="comic">
+                <a href="{{ url_for('view_comic', comic_id=comic['_id']) }}">
+                    <img src="{{ comic['image'] if comic['image'] else url_for('static', filename='images/comic.jpg') }}" alt="{{ comic['alt'] }}">
+                    <div class="comic-title">{{ comic['title'] }}</div>
+                    <div class="comic-meta">{{ comic['meta'] }}</div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
