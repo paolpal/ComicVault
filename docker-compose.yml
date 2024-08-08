@@ -3,7 +3,7 @@ services:
     build: .
     container_name: comic-vault 
     ports:
-      - "5000:5000"
+      - "25000:5000"
     environment:
       - FLASK_ENV=development
       - MONGO_URI=mongodb://comic-vault-db:27017/comic_vault
@@ -17,8 +17,6 @@ services:
   comic-vault-db:
     image: mongo:5.0
     container_name: comic-vault-db
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
     networks:

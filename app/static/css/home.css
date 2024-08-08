@@ -54,10 +54,14 @@ body {
 	justify-content: center;
 	cursor: pointer;
 	color: white;
-	text-decoration: none;
+  text-decoration: none;
 }
 .navbar .nav-icons i:hover {
 	background-color: #8c0001; /* porpora */
+}
+.navbar .nav-icons a{
+  color: white;
+  text-decoration: none;
 }
 .sidebar {
 	width: 60px;

@@ -54,6 +54,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
+  text-decoration: none;
 }
 .navbar .nav-icons i:hover {
 	background-color: #8c0001; /* porpora */
