@@ -10,7 +10,7 @@ services:
     depends_on:
       - comic-vault-db
     volumes:
-      - /home/paolo/Comics:/data/comics
+      - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
     networks:
       - comic-vault-network
 
