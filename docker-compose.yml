@@ -15,7 +15,7 @@ services:
       - comic-vault-network
 
   comic-vault-db:
-    image: mongo:5.0
+    image: mongo:4.4.22
     container_name: comic-vault-db
     volumes:
       - mongo-data:/data/db
