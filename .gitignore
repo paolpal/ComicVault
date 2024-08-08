@@ -23,9 +23,6 @@ __pycache__/
 *~
 *.swp
 
-# File di configurazione locali (es. database o credenziali)
-config.py
-
 # Cartelle di cache
 .cache/
 .mypy_cache/
