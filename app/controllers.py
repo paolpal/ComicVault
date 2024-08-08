@@ -101,7 +101,7 @@ class ComicController:
         
     @app.route('/scan')
     def scan_comics():
-        directory_to_scan = '/Users/paolo/Comics'
+        directory_to_scan = app.config['COMICS_FOLDER'] 
         scanner = ComicScanner(directory_to_scan, mongo)
         scanner.scan_and_register_comics()
         return redirect(url_for('index'))
