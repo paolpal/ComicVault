@@ -1,5 +1,6 @@
 # Ambiente virtuale
 venv/
+.venv/
 
 # File di configurazione per sistemi operativi
 *.DS_Store
@@ -27,3 +28,5 @@ __pycache__/
 .cache/
 .mypy_cache/
 
+# File di input di test
+data/
