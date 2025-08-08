@@ -2,112 +2,119 @@
 
 import os
 from app.models import Comic, Chapter
-from app.utils import allowed_file, list_images, extract_metadata_from_filename
+from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json
+from app.repositories.mongo.chapter import ChapterRepository
+from app.repositories.mongo.comic import ComicRepository
 
 class ComicScanner:
-    def __init__(self, directory_path, mongo):
+    def __init__(self, root_path, mongo):
         """
-        Inizializza il ComicScanner con i dettagli della directory e l'oggetto MongoDB esistente.
-
-        :param directory_path: Percorso della directory da scansionare
-        :param mongo: Oggetto MongoDB fornito da Flask
+        :param root_path: Directory principale dove risiedono i fumetti
+        :param mongo: Oggetto MongoDB di Flask
         """
-        self.directory_path = directory_path
-        self.db = mongo.db
-        self.comics_collection = self.db.comics
+        self.root_path = root_path
+        self.comic_repo = ComicRepository(mongo)
+        self.chapter_repo = ChapterRepository(mongo)
 
     def scan_and_register_comics(self):
-        """
-        Scansiona la directory e registra i fumetti e i capitoli trovati nel database.
-        """
-        self.comics_collection.drop()
-        for entry in os.listdir(self.directory_path):
-            entry_path = os.path.join(self.directory_path, entry)
-            if os.path.isdir(entry_path):
-                self._process_comic_directory(entry_path)
+        """Scansiona tutti i fumetti nella directory principale"""
+        self.comic_repo.drop()  # Pulisce i fumetti esistenti
+        self.chapter_repo.drop()  # Pulisce i capitoli esistenti
 
-    def _process_comic_directory(self, comic_directory):
-        """
-        Processa una directory come un fumetto e i suoi contenuti come capitoli.
+        for comic_folder in os.listdir(self.root_path):
+            comic_path = os.path.join(self.root_path, comic_folder)
+            if os.path.isdir(comic_path):
+                self._process_comic(comic_path)
 
-        :param comic_directory: Percorso della directory del fumetto
-        """
-        comic_title = os.path.basename(comic_directory)
-        metadata = extract_metadata_from_filename(comic_title)
-        comic = Comic(title=metadata['title'], path=comic_directory)
-        comic_id = comic.save()
+    def _process_comic(self, comic_path):
+        """Processa un singolo fumetto"""
+        comic_id = os.path.basename(comic_path)
 
-        for entry in os.listdir(comic_directory):
-            chapter_path = os.path.join(comic_directory, entry)
+        metadata_path = os.path.join(comic_path, "metadata.json")
+        if os.path.exists(metadata_path):
+            metadata = load_json(metadata_path)
+        else:
+            metadata = extract_metadata_from_filename(comic_id)
+
+        print(metadata)
+
+        comic = Comic(
+            title=metadata.get("titolo", comic_id),
+            original_title=metadata.get("titolo_originale"),
+            author=metadata.get("autore"),
+            plot=metadata.get("trama"),
+            year=metadata.get("anno_uscita"),
+            genres=metadata.get("genere", []),
+            status=metadata.get("stato"),
+            language=metadata.get("lingua"),
+            cover=metadata.get("link_copertina"),
+            tags=metadata.get("tags", []),
+            path=comic_path
+        )
+        print(f"Processing comic: {comic}")
+        saved_comic_id = self.comic_repo.save(comic)
+        print(f"Saved comic with ID: {saved_comic_id}")
+
+        # Scansiona sottocartelle (capitoli o volumi)
+        for entry in os.listdir(comic_path):
+            entry_path = os.path.join(comic_path, entry)
+            if not os.path.isdir(entry_path):
+                continue
+
+            if self._is_chapter_directory(entry_path):
+                self._register_chapter(entry_path, saved_comic_id)
+            else:
+                # Assume che sia una cartella volume
+                self._process_volume(entry_path, saved_comic_id)
+
+    def _process_volume(self, volume_path, comic_id):
+        """Processa i capitoli dentro una cartella volume"""
+        for chapter_folder in os.listdir(volume_path):
+            chapter_path = os.path.join(volume_path, chapter_folder)
             if os.path.isdir(chapter_path):
-                # Capitolo come directory
-                self._process_directory_as_chapter(chapter_path, comic_id)
-            elif allowed_file(entry, {'zip', 'cbz', 'rar', 'cbr'}):
-                # Capitolo come archivio
-                self._process_archive_as_chapter(chapter_path, comic_id)
+                self._register_chapter(chapter_path, comic_id)
 
-    def _process_directory_as_chapter(self, chapter_directory, comic_id):
-        """
-        Processa una directory come un capitolo del fumetto.
+    def _is_chapter_directory(self, path):
+        """Determina se una directory contiene immagini o metadati"""
+        has_images = any(allowed_file(f, {'jpg', 'jpeg', 'png'}) for f in os.listdir(path))
+        has_metadata = os.path.exists(os.path.join(path, "metadata.json"))
+        return has_images or has_metadata
 
-        :param chapter_directory: Percorso della directory del capitolo
-        :param comic_id: ID del fumetto a cui appartiene il capitolo
-        """
-        chapter_filename = os.path.basename(chapter_directory)
-        chapter_number = self._extract_chapter_number(chapter_filename)
-        chapter_title = 'Chapter '+str(chapter_number)
-        chapter_is_archive = False
+    def _register_chapter(self, chapter_path, comic_id):
+        """Registra un singolo capitolo"""
+        metadata_path = os.path.join(chapter_path, "metadata.json")
+        if os.path.exists(metadata_path):
+            metadata = load_json(metadata_path)
+            chapter_number = metadata.get("numero", self._extract_chapter_number(chapter_path))
+            chapter_title = metadata.get("titolo", f"Chapter {chapter_number}")
+            page_count = metadata.get("numero_pagine")
+            language = metadata.get("lingua")
+            publication_date = metadata.get("data_pubblicazione")
+            rtl = metadata.get("lettura_da_destra", True)
+        else:
+            chapter_number = self._extract_chapter_number(chapter_path)
+            chapter_title = f"Chapter {chapter_number}"
+            page_count = len(list_images(chapter_path))
+            language = "unknown"
+            publication_date = None
+            rtl = True
 
-        # Ottieni il numero di pagine contandole nella directory
-        page_files = list_images(chapter_directory, chapter_is_archive)
-        page_count = len(page_files)
-
-        # Salva il capitolo nel database
         chapter = Chapter(
             comic_id=comic_id,
-            title=chapter_title,
             number=chapter_number,
-            filename=chapter_filename,
-            page_count=page_count,
-            is_archive=chapter_is_archive
-        )
-        chapter.save()
-
-    def _process_archive_as_chapter(self, archive_path, comic_id):
-        """
-        Processa un archivio come un capitolo del fumetto.
-
-        :param archive_path: Percorso dell'archivio
-        :param comic_id: ID del fumetto a cui appartiene il capitolo
-        """
-        chapter_filename = os.path.basename(archive_path)
-        chapter_number = self._extract_chapter_number(chapter_filename)
-        chapter_title = 'Chapter '+str(chapter_number)
-        chapter_is_archive = True
-
-        # Ottieni il numero di pagine contandole nella directory
-        page_files = list_images(archive_path, chapter_is_archive)
-        page_count = len(page_files)
-
-        # Salva il capitolo nel database
-        chapter = Chapter(
-            comic_id=comic_id,
             title=chapter_title,
-            number=chapter_number,
-            filename=chapter_filename,
+            filename=os.path.basename(chapter_path),
             page_count=page_count,
-            is_archive=chapter_is_archive
+            language=language,
+            publication_date=publication_date,
+            is_archive=False,
+            rtl=rtl
         )
-        chapter.save()
+        print(f"Registering chapter: {chapter}")
+        self.chapter_repo.save(chapter)
 
-    def _extract_chapter_number(self, chapter_name):
-        """
-        Estrae il numero del capitolo dal nome del capitolo, se disponibile.
-
-        :param chapter_name: Nome del capitolo
-        :return: Numero del capitolo come intero, o 0 se non trovato
-        """
+    def _extract_chapter_number(self, name):
         try:
-            return int(''.join(filter(str.isdigit, chapter_name)))
+            return int(''.join(filter(str.isdigit, name)))
         except ValueError:
             return 0
