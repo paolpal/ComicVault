@@ -2,9 +2,9 @@ class Comic:
     def __init__(self, title, original_title, author, plot, year, genres, status, language, cover, tags, path, chapters=None):
         self.title = title
         self.original_title = original_title
-        self.author = author
+        self.author = author if author else "Unknown"
         self.plot = plot
-        self.year = year
+        self.year = year if year else "Unknown"
         self.genres = genres
         self.status = status
         self.language = language

@@ -19,7 +19,7 @@
             <div class="nav-icon">
                 <i class="fas fa-bars"></i>
             </div>
-            <div class="title">{{ chapter.title }}</div>
+            <div class="title">Chapter {{ chapter.number }} - {{ chapter.title }}</div>
         </div>
         <div class="nav-icons">
             <a href="{{ url_for('view_chapter', comic_id=comic._id, chapter_number=(chapter.number-1)) }}"><i class="fa-solid fa-backward"></i></a>

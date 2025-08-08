@@ -2,6 +2,8 @@ from io import BytesIO
 from flask import render_template, redirect, send_file, url_for, abort
 from app import app, mongo
 from app.models import Comic, Chapter
+from app.repositories.mongo.chapter import ChapterRepository
+from app.repositories.mongo.comic import ComicRepository
 from app.services import ComicScanner, ComicService
 from PIL import Image
 
@@ -13,7 +15,8 @@ class ComicController:
         """
         Visualizza la lista dei fumetti.
         """
-        comics = Comic.list_all()
+        comic_repo = ComicRepository(mongo)
+        comics = comic_repo.list_all()
         return render_template('home.html', comics=comics)
     
     @app.route('/comic/<comic_id>')
@@ -22,7 +25,8 @@ class ComicController:
         """
         Visualizza i dettagli di un fumetto, inclusi i capitoli.
         """
-        comic = Comic.get_by_id(comic_id)
+        comic_repo = ComicRepository(mongo)
+        comic = comic_repo.get_by_id(comic_id)
         chapters_per_page = app.config['CHAPTERS_PER_PAGE']
         offset = (page_number - 1) * chapters_per_page
         
@@ -45,18 +49,20 @@ class ComicController:
         :return: Renderizza la pagina del capitolo o restituisce un errore
         """
         # Recupera il fumetto dal database
-        comic = Comic.get_by_id(comic_id)
-        
+        comic_repo = ComicRepository(mongo)
+        chapter_repo = ChapterRepository(mongo)
+        comic = comic_repo.get_by_id(comic_id)
+
         # Recupera il capitolo dal database
-        chapter = Chapter.find_by_number(comic_id, chapter_number)
+        chapter = chapter_repo.get_by_number(comic_id, chapter_number)
         if chapter is None:
             abort(404, description="Capitolo non trovato.")
 
         images = chapter['page_count']
         page = chapter_number // app.config['CHAPTERS_PER_PAGE'] + 1
 
-        prev = Chapter.find_by_number(comic_id, chapter_number-1)
-        next = Chapter.find_by_number(comic_id, chapter_number+1)
+        prev = chapter_repo.get_by_number(comic_id, chapter_number-1)
+        next = chapter_repo.get_by_number(comic_id, chapter_number+1)
 
         return render_template('chapter.html', comic=comic, chapter=chapter, images=images, page=page)
 
@@ -65,6 +71,7 @@ class ComicController:
         """
         Visualizza una pagina specifica di un capitolo di un fumetto.
         """
+        print(f"Requesting page {page_number} of chapter {chapter_number} for comic {comic_id}")
         try:
             image_data, mimetype = ComicService.get_page_image(comic_id, chapter_number, page_number)
             return send_file(BytesIO(image_data), mimetype=mimetype)
@@ -78,6 +85,7 @@ class ComicController:
         """
         Visualizza una pagina specifica di un capitolo di un fumetto con qualità ridotta.
         """
+        print(f"Requesting cover for comic {comic_id}, chapter {chapter_number}")
         try:
             # Ottieni i dati dell'immagine e il tipo MIME dal servizio
             image_data, mimetype = ComicService.get_page_image(comic_id, chapter_number, 0)

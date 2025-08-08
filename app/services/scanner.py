@@ -39,21 +39,19 @@ class ComicScanner:
         print(metadata)
 
         comic = Comic(
-            title=metadata.get("titolo", comic_id),
-            original_title=metadata.get("titolo_originale"),
-            author=metadata.get("autore"),
-            plot=metadata.get("trama"),
-            year=metadata.get("anno_uscita"),
-            genres=metadata.get("genere", []),
-            status=metadata.get("stato"),
-            language=metadata.get("lingua"),
-            cover=metadata.get("link_copertina"),
+            title=metadata.get("title", comic_id),
+            original_title=metadata.get("original_title"),
+            author=metadata.get("author"),
+            plot=metadata.get("plot"),
+            year=metadata.get("year"),
+            genres=metadata.get("genres", []),
+            status=metadata.get("status"),
+            language=metadata.get("language"),
+            cover=metadata.get("cover"),
             tags=metadata.get("tags", []),
             path=comic_path
         )
-        print(f"Processing comic: {comic}")
         saved_comic_id = self.comic_repo.save(comic)
-        print(f"Saved comic with ID: {saved_comic_id}")
 
         # Scansiona sottocartelle (capitoli o volumi)
         for entry in os.listdir(comic_path):
@@ -72,7 +70,8 @@ class ComicScanner:
         for chapter_folder in os.listdir(volume_path):
             chapter_path = os.path.join(volume_path, chapter_folder)
             if os.path.isdir(chapter_path):
-                self._register_chapter(chapter_path, comic_id)
+                volume_folder = os.path.basename(volume_path)
+                self._register_chapter(chapter_path, comic_id, volume_folder)
 
     def _is_chapter_directory(self, path):
         """Determina se una directory contiene immagini o metadati"""
@@ -80,17 +79,17 @@ class ComicScanner:
         has_metadata = os.path.exists(os.path.join(path, "metadata.json"))
         return has_images or has_metadata
 
-    def _register_chapter(self, chapter_path, comic_id):
+    def _register_chapter(self, chapter_path, comic_id, volume_folder=None):
         """Registra un singolo capitolo"""
         metadata_path = os.path.join(chapter_path, "metadata.json")
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
-            chapter_number = metadata.get("numero", self._extract_chapter_number(chapter_path))
-            chapter_title = metadata.get("titolo", f"Chapter {chapter_number}")
-            page_count = metadata.get("numero_pagine")
-            language = metadata.get("lingua")
-            publication_date = metadata.get("data_pubblicazione")
-            rtl = metadata.get("lettura_da_destra", True)
+            chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
+            chapter_title = metadata.get("title", f"Chapter {chapter_number}")
+            page_count = metadata.get("page_count", None)
+            language = metadata.get("language")
+            publication_date = metadata.get("publication_date")
+            rtl = metadata.get("rtl", True)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
             chapter_title = f"Chapter {chapter_number}"
@@ -98,23 +97,26 @@ class ComicScanner:
             language = "unknown"
             publication_date = None
             rtl = True
+        page_count = page_count if page_count is not None else len(list_images(chapter_path))
+
+        chapter_path = os.path.join(volume_folder, os.path.basename(chapter_path)) if volume_folder else os.path.basename(chapter_path)
 
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
             title=chapter_title,
-            filename=os.path.basename(chapter_path),
+            filename=chapter_path,
             page_count=page_count,
             language=language,
             publication_date=publication_date,
             is_archive=False,
             rtl=rtl
         )
-        print(f"Registering chapter: {chapter}")
         self.chapter_repo.save(chapter)
 
     def _extract_chapter_number(self, name):
+        base = os.path.basename(name)
         try:
-            return int(''.join(filter(str.isdigit, name)))
+            return int(''.join(filter(str.isdigit, base)))
         except ValueError:
             return 0

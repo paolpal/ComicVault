@@ -3,7 +3,9 @@ from flask import abort
 from io import BytesIO
 import zipfile
 import rarfile
-from app.models import Comic, Chapter
+from app.repositories.mongo.chapter import ChapterRepository
+from app.repositories.mongo.comic import ComicRepository
+from app import mongo
 
 class ComicService:
     @staticmethod
@@ -17,8 +19,15 @@ class ComicService:
         :return: Tuple contenente i dati dell'immagine e il mimetype
         """
         # Recupera il fumetto e il capitolo dal database
-        comic = Comic.get_by_id(comic_id)
-        chapter = Chapter.find_by_number(comic_id, chapter_number)
+        comic_repo = ComicRepository(mongo)
+        comic = comic_repo.get_by_id(comic_id)
+
+        chapter_repo = ChapterRepository(mongo)
+        chapter = chapter_repo.get_by_number(comic_id, chapter_number)
+
+        print(f"Comic path: {comic['path']}")
+        print(f"Chapter number: {chapter_number}, Page number: {page_number}")
+        
 
         if not chapter:
             raise FileNotFoundError("Capitolo non trovato")
@@ -29,6 +38,7 @@ class ComicService:
             return ComicService._get_image_from_archive(archive_path, page_number)
         else:
             chapter_path = os.path.join(comic['path'], chapter['filename'])
+            print(f"Chapter path: {chapter_path}")
             return ComicService._get_image_from_directory(chapter_path, page_number)
 
     @staticmethod
