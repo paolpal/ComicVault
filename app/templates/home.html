@@ -33,8 +33,8 @@
         <div class="comics-grid">
             {% for comic in comics %}
             <div class="comic">
-                <a href="{{ url_for('view_comic', comic_id=comic['_id']) }}">
-                    <img src="{{ comic['cover'] if comic['cover'] else url_for('static', filename='images/comic.jpg') }}" alt="{{ comic['alt'] }}">
+                <a href="{{ url_for('view_comic', comic_slug=comic['slug']) }}">
+                    <img src="{{ url_for('view_comic_cover', comic_slug=comic['slug']) }}" alt="{{ comic['alt'] }}">            
                     <div class="comic-title">{{ comic['title'] }}</div>
                     <div class="comic-meta">{{ comic['meta'] }}</div>
                 </a>

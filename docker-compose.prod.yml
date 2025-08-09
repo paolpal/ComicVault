@@ -1,0 +1,9 @@
+services:
+  comic-vault:
+    build:
+      target: production
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
+    command: gunicorn -b 0.0.0.0:5000 run:app --workers 4

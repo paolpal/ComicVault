@@ -2,7 +2,7 @@
 
 import os
 from app.models import Comic, Chapter
-from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json
+from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json, generate_slug
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
 
@@ -36,8 +36,6 @@ class ComicScanner:
         else:
             metadata = extract_metadata_from_filename(comic_id)
 
-        print(metadata)
-
         comic = Comic(
             title=metadata.get("title", comic_id),
             original_title=metadata.get("original_title"),
@@ -49,6 +47,7 @@ class ComicScanner:
             language=metadata.get("language"),
             cover=metadata.get("cover"),
             tags=metadata.get("tags", []),
+            version=metadata.get("version", None),
             path=comic_path
         )
         saved_comic_id = self.comic_repo.save(comic)

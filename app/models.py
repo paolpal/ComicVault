@@ -1,5 +1,7 @@
+from app.utils import generate_slug
+
 class Comic:
-    def __init__(self, title, original_title, author, plot, year, genres, status, language, cover, tags, path, chapters=None):
+    def __init__(self, title, original_title, author, plot, year, genres, status, language, cover, tags, path, version=None, chapters=None):
         self.title = title
         self.original_title = original_title
         self.author = author if author else "Unknown"
@@ -11,6 +13,8 @@ class Comic:
         self.cover = cover
         self.tags = tags
         self.path = path
+        self.version = version
+        self.slug = generate_slug(title, language, version)
         self.chapters = chapters or []
 
     def __str__(self) -> str:

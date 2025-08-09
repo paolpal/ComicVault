@@ -21,6 +21,8 @@ class ComicRepository:
             'status': comic.status,
             'language': comic.language,
             'cover': comic.cover,
+            'slug': comic.slug,
+            'version': comic.version,
             'tags': comic.tags
         }
         result = self.mongo.db["comics"].insert_one(comic_data)
@@ -41,6 +43,16 @@ class ComicRepository:
         Recupera un fumetto dal database dato il suo titolo.
         """
         comic = self.mongo.db["comics"].find_one({'title': title})
+        if comic:
+            # Ordinamento dei capitoli per numero
+            comic['chapters'] = sorted(comic['chapters'], key=lambda x: x['number'])
+        return comic
+
+    def get_by_slug(self, slug):
+        """
+        Recupera un fumetto dal database dato il suo slug.
+        """
+        comic = self.mongo.db["comics"].find_one({'slug': slug})
         if comic:
             # Ordinamento dei capitoli per numero
             comic['chapters'] = sorted(comic['chapters'], key=lambda x: x['number'])

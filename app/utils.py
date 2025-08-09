@@ -5,6 +5,7 @@ import io
 from PIL import Image
 from flask import current_app
 import json
+from slugify import slugify
 
 def allowed_file(filename, allowed_extensions=None):
     """
@@ -135,3 +136,10 @@ def list_images(path, is_archive=False):
 def load_json(path):
     with open(path, encoding='utf-8') as f:
         return json.load(f)
+
+def generate_slug(title, language, version=None):
+    base = f"{title}-{language}"
+    if version:
+        base += f"-{version}"
+    slug = slugify(base)
+    return slug

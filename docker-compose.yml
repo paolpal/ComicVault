@@ -1,16 +1,17 @@
+version: "3.9"
+
 services:
   comic-vault:
-    build: .
-    container_name: comic-vault 
+    build:
+      context: .
+      target: base
+    container_name: comic-vault
     ports:
       - "25000:5000"
     environment:
-      - FLASK_ENV=development
       - MONGO_URI=mongodb://comic-vault-db:27017/comic_vault
     depends_on:
       - comic-vault-db
-    volumes:
-      - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
     networks:
       - comic-vault-network
 
@@ -27,4 +28,3 @@ networks:
 
 volumes:
   mongo-data:
-
