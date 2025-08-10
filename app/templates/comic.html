@@ -18,7 +18,7 @@
         <div class="nav-icons">
             <!--NAVIGAZIONE-->
             {% if page_number > 3 %}
-                <a href="{{ url_for('view_comic', comic_id=comic['_id']) }}"><i>1</i></a>
+                <a href="{{ url_for('view_comic', comic_slug=comic['slug']) }}"><i>1</i></a>
                 {% if page_number >= 5 %}
                     <a href="#"><i>...</i></a>
                 {% endif %}
@@ -26,7 +26,7 @@
 
             {% for page in range(page_number - 2, page_number + 3) %}
                 {% if page >= 1 and page <= total_pages %}
-                    <a href="{{ url_for('view_comic', comic_id=comic['_id'], page_number=page) }}"><i{% if page == page_number %} class="active"{% endif %}>{{ page }}</i></a>
+                    <a href="{{ url_for('view_comic', comic_slug=comic['slug'], page_number=page) }}"><i{% if page == page_number %} class="active"{% endif %}>{{ page }}</i></a>
                 {% endif %}
             {% endfor %}
 
@@ -34,7 +34,7 @@
                 {% if page_number <= total_pages - 4 %}
                     <a href="#"><i>...</i></a>
                 {% endif %}
-                <a href="{{ url_for('view_comic', comic_id=comic['_id'], page_number=total_pages) }}"><i>{{ total_pages }}</i></a>
+                <a href="{{ url_for('view_comic', comic_slug=comic['slug'], page_number=total_pages) }}"><i>{{ total_pages }}</i></a>
             {% endif %}
             <!--FINE NAVIGAZIONE-->
             <a href="{{ url_for('index')}}"><i class="fa-solid fa-arrow-left"></i></a>
@@ -52,21 +52,27 @@
     </div>
     <div class="content">
         <div class="comic-header">
-			<img src="{{ comic['image'] if comic['image'] else url_for('static', filename='images/comic.jpg') }}" alt="{{ comic['alt'] }}">
+            <img src="{{ url_for('view_comic_cover', comic_slug=comic['slug']) }}" alt="{{ comic['alt'] }}">            
             <div class="comic-details">
                 <div class="comic-title">{{ comic.title }}</div>
                 <div class="comic-meta">
                     <p>Author: {{ comic.author }}</p>
-                    <p>Publisher: {{ comic.publisher }}</p>
-                    <p>Issues: {{ comic.issues }}</p>
+                    <p>Original Title: {{ comic.original_title }}</p>
+                    <p>Plot: {{ comic.plot }}</p>
+                    <p>Year: {{ comic.year }}</p>
+                    <p>Genres: 
+                        {% for genre in comic.genres %}
+                            <span class="genre">{{ genre }}</span>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
                 </div>
             </div>
         </div>
         <div class="chapter-list">
             {% for chapter in chapters %}
 				<div class="chapter">
-					<a href="{{ url_for('view_chapter', comic_id=comic._id, chapter_number=chapter.number) }}">
-						<img src="{{ url_for('view_cover', comic_id=comic._id, chapter_number=chapter.number) }}" alt="Cover">
+					<a href="{{ url_for('view_chapter', comic_slug=comic.slug, chapter_number=('%s' % chapter.number).replace('.', '-')) }}">
+						<img src="{{ url_for('view_cover', comic_slug=comic.slug, chapter_number=('%s' % chapter.number).replace('.', '-')) }}" alt="Cover">
 						<div class="chapter-title">{{ chapter.title }}</div>
 						<div class="chapter-meta">Capitolo {{ chapter.number }}</div>
 					</a>

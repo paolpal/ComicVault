@@ -4,6 +4,8 @@ import rarfile
 import io
 from PIL import Image
 from flask import current_app
+import json
+from slugify import slugify
 
 def allowed_file(filename, allowed_extensions=None):
     """
@@ -98,7 +100,7 @@ def read_image_from_archive(archive_path, image_filename):
         print(f"Errore sconosciuto durante la lettura dell'immagine: {e}")
         return None
 
-def list_images(path, is_archive):
+def list_images(path, is_archive=False):
     """
     Restituisce una lista di file immagine in una directory o in un archivio.
 
@@ -129,3 +131,15 @@ def list_images(path, is_archive):
                 images.append(file)
 
     return images
+
+# app/utils.py
+def load_json(path):
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
+
+def generate_slug(title, language=None, version=None):
+    base = f"{title}-{language}" if language else title
+    if version:
+        base += f"-{version}"
+    slug = slugify(base)
+    return slug

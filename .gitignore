@@ -30,3 +30,5 @@ __pycache__/
 
 # File di input di test
 data/
+tests/
+.pytest_cache/

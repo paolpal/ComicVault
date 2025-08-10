@@ -1,0 +1,12 @@
+# File di override per eventuali personalizzazioni locali
+# Per default non fa nulla, mantiene la configurazione di produzione
+# Puoi personalizzare questo file localmente senza committarlo
+
+services:
+  comic-vault:
+    # Aggiungi qui eventuali override specifici per il tuo ambiente
+    # Esempio:
+    # ports:
+    #   - "3000:5000"  # per cambiare porta
+    # volumes:
+    #   - /percorso/custom:/data/comics  # per path custom dei comics

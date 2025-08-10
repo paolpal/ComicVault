@@ -3,22 +3,51 @@ from flask import abort
 from io import BytesIO
 import zipfile
 import rarfile
-from app.models import Comic, Chapter
+from app.repositories.mongo.chapter import ChapterRepository
+from app.repositories.mongo.comic import ComicRepository
+from app import mongo
 
 class ComicService:
     @staticmethod
-    def get_page_image(comic_id, chapter_number, page_number):
+    def get_comic_cover(comic_slug):
+        """
+        Recupera la copertina di un fumetto.
+
+        :param comic_slug: slug del fumetto
+        :return: Tuple contenente i dati della copertina e il mimetype
+        """
+        comic_repo = ComicRepository(mongo)
+        comic = comic_repo.get_by_slug(comic_slug)
+        if not comic or 'cover' not in comic:
+            raise FileNotFoundError("Fumetto o copertina non trovati")
+
+        cover_url = comic['cover']
+        if cover_url.startswith('http://') or cover_url.startswith('https://'):
+            return cover_url, None  # URL esterno, non gestiamo qui
+        else:
+            cover_path = os.path.join(comic['path'], cover_url)
+            return cover_path, ComicService._get_mimetype(cover_url)
+
+    @staticmethod
+    def get_page_image(comic_slug, chapter_number, page_number):
         """
         Recupera l'immagine di una specifica pagina di un capitolo di un fumetto.
 
-        :param comic_id: ID del fumetto
+        :param comic_slug: slug del fumetto
         :param chapter_number: Numero del capitolo
         :param page_number: Numero della pagina
         :return: Tuple contenente i dati dell'immagine e il mimetype
         """
         # Recupera il fumetto e il capitolo dal database
-        comic = Comic.get_by_id(comic_id)
-        chapter = Chapter.find_by_number(comic_id, chapter_number)
+        comic_repo = ComicRepository(mongo)
+        comic = comic_repo.get_by_slug(comic_slug)
+
+        chapter_repo = ChapterRepository(mongo)
+        chapter = chapter_repo.get_by_number(comic_slug, chapter_number)
+
+        print(f"Comic path: {comic['path']}")
+        print(f"Chapter number: {chapter_number}, Page number: {page_number}")
+        
 
         if not chapter:
             raise FileNotFoundError("Capitolo non trovato")
@@ -29,6 +58,7 @@ class ComicService:
             return ComicService._get_image_from_archive(archive_path, page_number)
         else:
             chapter_path = os.path.join(comic['path'], chapter['filename'])
+            print(f"Chapter path: {chapter_path}")
             return ComicService._get_image_from_directory(chapter_path, page_number)
 
     @staticmethod
