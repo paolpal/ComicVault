@@ -137,8 +137,8 @@ def load_json(path):
     with open(path, encoding='utf-8') as f:
         return json.load(f)
 
-def generate_slug(title, language, version=None):
-    base = f"{title}-{language}"
+def generate_slug(title, language=None, version=None):
+    base = f"{title}-{language}" if language else title
     if version:
         base += f"-{version}"
     slug = slugify(base)

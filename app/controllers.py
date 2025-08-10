@@ -76,7 +76,8 @@ class ComicController:
             abort(404, description="Capitolo non trovato.")
 
         images = chapter['page_count']
-        page = chapter_number // app.config['CHAPTERS_PER_PAGE'] + 1
+        chapter_index = comic['chapters'].index(chapter)
+        page = chapter_index // app.config['CHAPTERS_PER_PAGE'] + 1
 
         chapters = comic['chapters']
 
@@ -114,16 +115,20 @@ class ComicController:
         try:
             comic_repo = ComicRepository(mongo)
             comic = comic_repo.get_by_slug(comic_slug)
-            if not comic or 'cover' not in comic:
+            if not comic:
                 abort(404, description="Fumetto non trovato")
-            cover_url = comic['cover']
-            if cover_url.startswith('http://') or cover_url.startswith('https://'):
+            if 'cover' not in comic or not comic['cover']:
+                cover_url = url_for('static', filename='images/comic.jpg')
                 return redirect(cover_url)
             else:
-                cover_url = os.path.join(comic['path'], cover_url)
-                print(f"Cover URL is not a valid external link: {cover_url}")
-                #raise FileNotFoundError(f"Cover URL is not a valid external link: {cover_url}")
-                return send_file(cover_url, mimetype='image/jpeg')
+                cover_url = comic['cover']
+                if cover_url.startswith('http://') or cover_url.startswith('https://'):
+                    return redirect(cover_url)
+                else:
+                    cover_url = os.path.join(comic['path'], cover_url)
+                    print(f"Cover URL is not a valid external link: {cover_url}")
+                    #raise FileNotFoundError(f"Cover URL is not a valid external link: {cover_url}")
+                    return send_file(cover_url, mimetype='image/jpeg')
         except Exception as e:
             abort(500, description=str(e))
 

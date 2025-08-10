@@ -9,7 +9,7 @@ class Comic:
         self.year = year if year else "Unknown"
         self.genres = genres
         self.status = status
-        self.language = language
+        self.language = language if language else None
         self.cover = cover
         self.tags = tags
         self.path = path

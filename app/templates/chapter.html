@@ -22,8 +22,16 @@
             <div class="title">Chapter {{ chapter.number }} - {{ chapter.title }}</div>
         </div>
         <div class="nav-icons">
-            <a href="{{ url_for('view_chapter', comic_slug=comic.slug, chapter_number=prev) }}"><i class="fa-solid fa-backward"></i></a>
-            <a href="{{ url_for('view_chapter', comic_slug=comic.slug, chapter_number=next) }}"><i class="fa-solid fa-forward"></i></a>
+            <a href="{{ prev and url_for('view_chapter', comic_slug=comic.slug, chapter_number=prev) or '#' }}"
+            class="{{ '' if prev else 'disabled' }}">
+                <i class="fa-solid fa-backward"></i>
+            </a>
+
+            <a href="{{ next and url_for('view_chapter', comic_slug=comic.slug, chapter_number=next) or '#' }}"
+            class="{{ '' if next else 'disabled' }}">
+                <i class="fa-solid fa-forward"></i>
+            </a>
+
             <a href="{{ url_for('view_comic', comic_slug=comic.slug, page_number=page) }}"><i class="fa-solid fa-arrow-left"></i></a>
             <a href="#"><i class="fas fa-sign-out-alt"></i></a>
         </div>

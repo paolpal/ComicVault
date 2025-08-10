@@ -44,7 +44,7 @@ class ComicScanner:
             year=metadata.get("year"),
             genres=metadata.get("genres", []),
             status=metadata.get("status"),
-            language=metadata.get("language"),
+            language=metadata.get("language", None),
             cover=metadata.get("cover"),
             tags=metadata.get("tags", []),
             version=metadata.get("version", None),
