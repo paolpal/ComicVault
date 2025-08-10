@@ -1,11 +1,12 @@
+# File di override per eventuali personalizzazioni locali
+# Per default non fa nulla, mantiene la configurazione di produzione
+# Puoi personalizzare questo file localmente senza committarlo
+
 services:
   comic-vault:
-    build:
-      target: development
-    environment:
-      - FLASK_APP=run.py
-      - FLASK_ENV=development
-    volumes:
-      - .:/app
-      - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
-    command: flask run --host=0.0.0.0 --reload
+    # Aggiungi qui eventuali override specifici per il tuo ambiente
+    # Esempio:
+    # ports:
+    #   - "3000:5000"  # per cambiare porta
+    # volumes:
+    #   - /percorso/custom:/data/comics  # per path custom dei comics
