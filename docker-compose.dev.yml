@@ -4,8 +4,8 @@ services:
       target: development
     environment:
       - FLASK_APP=run.py
-      - FLASK_ENV=development
+      - FLASK_DEBUG=1
     volumes:
       - .:/app
       - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
-    command: flask run --host=0.0.0.0 --reload
+    command: python -m flask run --host=0.0.0.0 --port=5000 --reload
