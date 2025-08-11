@@ -6,6 +6,7 @@
     <title>{{ comic.title }} - Comic Vault</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/comic.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
 <body>
     <div class="navbar">
@@ -20,7 +21,7 @@
             {% if page_number > 3 %}
                 <a href="{{ url_for('view_comic', comic_slug=comic['slug']) }}"><i>1</i></a>
                 {% if page_number >= 5 %}
-                    <a href="#"><i>...</i></a>
+                    <a href="#" class="disabled"><i>...</i></a>
                 {% endif %}
             {% endif %}
 
@@ -32,7 +33,7 @@
 
             {% if page_number < total_pages - 2 %}
                 {% if page_number <= total_pages - 4 %}
-                    <a href="#"><i>...</i></a>
+                    <a href="#" class="disabled"><i>...</i></a>
                 {% endif %}
                 <a href="{{ url_for('view_comic', comic_slug=comic['slug'], page_number=total_pages) }}"><i>{{ total_pages }}</i></a>
             {% endif %}

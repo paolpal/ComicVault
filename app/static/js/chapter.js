@@ -1,13 +1,4 @@
 $(document).ready(function(){
-	$('.carousel-inner').slick({
-		dots: true,
-		autoplay: false,
-		arrows: false,
-		rtl: true,
-		infinite: false,
-		adaptiveHeight: false,
-	});
-
 	let zoom = 1;
     let isZoomed = false;
 
