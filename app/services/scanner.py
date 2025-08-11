@@ -52,34 +52,49 @@ class ComicScanner:
         )
         saved_comic_id = self.comic_repo.save(comic)
 
-        # Scansiona sottocartelle (capitoli o volumi)
+        # Estrai il valore RTL di default del fumetto (default: True)
+        comic_rtl_default = metadata.get("rtl", True)
+
+        # Scansiona contenuto della directory del fumetto
         for entry in os.listdir(comic_path):
             entry_path = os.path.join(comic_path, entry)
-            if not os.path.isdir(entry_path):
-                continue
+            
+            # Controlla se è un file archivio singolo
+            if os.path.isfile(entry_path) and self._is_archive_file(entry):
+                self._register_archive_chapter(entry_path, saved_comic_id, comic_rtl_default)
+            elif os.path.isdir(entry_path):
+                if self._is_chapter(entry_path):
+                    self._register_chapter(entry_path, saved_comic_id, comic_rtl_default)
+                else:
+                    # Assume che sia una cartella volume
+                    self._process_volume(entry_path, saved_comic_id, comic_rtl_default)
 
-            if self._is_chapter_directory(entry_path):
-                self._register_chapter(entry_path, saved_comic_id)
-            else:
-                # Assume che sia una cartella volume
-                self._process_volume(entry_path, saved_comic_id)
-
-    def _process_volume(self, volume_path, comic_id):
+    def _process_volume(self, volume_path, comic_id, comic_rtl_default):
         """Processa i capitoli dentro una cartella volume"""
-        for chapter_folder in os.listdir(volume_path):
-            chapter_path = os.path.join(volume_path, chapter_folder)
-            if os.path.isdir(chapter_path):
-                volume_folder = os.path.basename(volume_path)
-                self._register_chapter(chapter_path, comic_id, volume_folder)
+        volume_folder = os.path.basename(volume_path)
+        
+        for entry in os.listdir(volume_path):
+            entry_path = os.path.join(volume_path, entry)
+            
+            # Gestisce sia directory che file archivio
+            if os.path.isfile(entry_path) and self._is_archive_file(entry):
+                self._register_archive_chapter(entry_path, comic_id, comic_rtl_default, volume_folder)
+            elif os.path.isdir(entry_path):
+                self._register_chapter(entry_path, comic_id, comic_rtl_default, volume_folder)
 
-    def _is_chapter_directory(self, path):
+    def _is_chapter(self, path):
         """Determina se una directory contiene immagini o metadati"""
         has_images = any(allowed_file(f, {'jpg', 'jpeg', 'png'}) for f in os.listdir(path))
         has_metadata = os.path.exists(os.path.join(path, "metadata.json"))
-        return has_images or has_metadata
+        is_archive = any(f.lower().endswith(('.cbz', '.cbr', '.zip', '.rar')) for f in os.listdir(path))
+        return has_images or has_metadata or is_archive
 
-    def _register_chapter(self, chapter_path, comic_id, volume_folder=None):
-        """Registra un singolo capitolo"""
+    def _is_archive_file(self, filename):
+        """Determina se un file è un archivio di fumetti supportato"""
+        return filename.lower().endswith(('.cbz', '.cbr', '.zip', '.rar'))
+
+    def _register_chapter(self, chapter_path, comic_id, comic_rtl_default, volume_folder=None):
+        """Registra un singolo capitolo da directory"""
         metadata_path = os.path.join(chapter_path, "metadata.json")
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
@@ -88,15 +103,20 @@ class ComicScanner:
             page_count = metadata.get("page_count", None)
             language = metadata.get("language")
             publication_date = metadata.get("publication_date")
-            rtl = metadata.get("rtl", True)
+            # RTL: usa quello del capitolo se specificato, altrimenti quello del fumetto
+            rtl = metadata.get("rtl", comic_rtl_default)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
             chapter_title = f"Chapter {chapter_number}"
-            page_count = len(list_images(chapter_path))
+            page_count = None
             language = "unknown"
             publication_date = None
-            rtl = True
-        page_count = page_count if page_count is not None else len(list_images(chapter_path))
+            # Se non ci sono metadati, usa quello del fumetto
+            rtl = comic_rtl_default
+        
+        # Conta le pagine se non specificato nei metadati
+        if page_count is None:
+            page_count = len(list_images(chapter_path, is_archive=False))
 
         chapter_path = os.path.join(volume_folder, os.path.basename(chapter_path)) if volume_folder else os.path.basename(chapter_path)
 
@@ -110,6 +130,36 @@ class ComicScanner:
             publication_date=publication_date,
             is_archive=False,
             rtl=rtl
+        )
+        self.chapter_repo.save(chapter)
+
+    def _register_archive_chapter(self, archive_path, comic_id, comic_rtl_default, volume_folder=None):
+        """Registra un capitolo da un file archivio (CBZ, CBR, ZIP, RAR)"""
+        # Estrai il numero del capitolo dal nome del file
+        archive_name = os.path.basename(archive_path)
+        chapter_number = self._extract_chapter_number(archive_name)
+        chapter_title = f"Chapter {chapter_number}"
+        
+        # Conta le pagine nell'archivio
+        try:
+            page_count = len(list_images(archive_path, is_archive=True))
+        except Exception as e:
+            print(f"Errore nel contare le pagine dell'archivio {archive_path}: {e}")
+            page_count = 0
+        
+        # Usa il nome del file come filename (relativo se in un volume)
+        filename = os.path.join(volume_folder, archive_name) if volume_folder else archive_name
+        
+        chapter = Chapter(
+            comic_id=comic_id,
+            number=chapter_number,
+            title=chapter_title,
+            filename=filename,
+            page_count=page_count,
+            language="unknown",
+            publication_date=None,
+            is_archive=True,  # Importante: marca come archivio
+            rtl=comic_rtl_default  # Usa il valore RTL del fumetto per gli archivi
         )
         self.chapter_repo.save(chapter)
 
