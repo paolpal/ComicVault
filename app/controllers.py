@@ -5,7 +5,7 @@ from app import app, mongo
 from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
-from app.services import ComicScanner, ComicService
+from app.services import ComicScanner, OptimizedComicScanner, ComicService
 from PIL import Image
 
 class ComicController:
@@ -166,7 +166,7 @@ class ComicController:
     @app.route('/scan')
     def scan_comics():
         directory_to_scan = app.config['COMICS_FOLDER'] 
-        scanner = ComicScanner(directory_to_scan, mongo)
+        scanner = OptimizedComicScanner(directory_to_scan, mongo)
         scanner.scan_and_register_comics()
         return redirect(url_for('index'))
 

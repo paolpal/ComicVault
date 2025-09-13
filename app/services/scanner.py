@@ -1,8 +1,9 @@
 # app/services/scanner.py
 
 import os
+import logging
 from app.models import Comic, Chapter
-from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json, generate_slug
+from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json, generate_slug, calculate_comic_hash, calculate_chapter_hash
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
 
@@ -12,6 +13,7 @@ class ComicScanner:
         :param root_path: Directory principale dove risiedono i fumetti
         :param mongo: Oggetto MongoDB di Flask
         """
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.root_path = root_path
         self.comic_repo = ComicRepository(mongo)
         self.chapter_repo = ChapterRepository(mongo)
@@ -144,7 +146,7 @@ class ComicScanner:
         try:
             page_count = len(list_images(archive_path, is_archive=True))
         except Exception as e:
-            print(f"Errore nel contare le pagine dell'archivio {archive_path}: {e}")
+            self.logger.error(f"Errore nel contare le pagine dell'archivio {archive_path}: {e}")
             page_count = 0
         
         # Usa il nome del file come filename (relativo se in un volume)
@@ -169,3 +171,186 @@ class ComicScanner:
             return int(''.join(filter(str.isdigit, base)))
         except ValueError:
             return 0
+
+
+class OptimizedComicScanner(ComicScanner):
+    """
+    Scanner ottimizzato che utilizza hash per processare solo i fumetti modificati.
+    """
+    
+    def __init__(self, root_path, mongo):
+        super().__init__(root_path, mongo)
+        self.logger = logging.getLogger(self.__class__.__name__)
+    
+    def scan_and_register_comics(self):
+        """Scansiona solo i fumetti modificati usando hash"""
+        self.logger.info("Avvio scansione ottimizzata con meccanismo hash...")
+        
+        comics_processed = 0
+        comics_skipped = 0
+        
+        for comic_folder in os.listdir(self.root_path):
+            comic_path = os.path.join(self.root_path, comic_folder)
+            if os.path.isdir(comic_path):
+                try:
+                    # Calcola hash del fumetto
+                    current_hash = calculate_comic_hash(comic_path)
+                    
+                    # Controlla se il fumetto esiste già nel database
+                    existing_comic = self.comic_repo.get_by_path(comic_path)
+                    
+                    if not existing_comic or existing_comic.get('content_hash') != current_hash:
+                        self.logger.info(f"Processando fumetto modificato: {comic_folder}")
+                        self._process_comic_with_hash(comic_path, current_hash)
+                        comics_processed += 1
+                    else:
+                        self.logger.debug(f"Saltando fumetto non modificato: {comic_folder}")
+                        comics_skipped += 1
+                        
+                except Exception as e:
+                    self.logger.error(f"Errore nel processare {comic_folder}: {e}")
+                    # Fallback: processa comunque il fumetto
+                    self._process_comic(comic_path)
+                    comics_processed += 1
+        
+        self.logger.info(f"Scansione completata: {comics_processed} processati, {comics_skipped} saltati")
+
+    def _process_comic_with_hash(self, comic_path, content_hash):
+        """Processa un fumetto aggiornando solo i capitoli modificati"""
+        comic_id = os.path.basename(comic_path)
+
+        # Rimuovi il fumetto esistente e i suoi capitoli se presente
+        existing_comic = self.comic_repo.get_by_path(comic_path)
+        if existing_comic:
+            self.chapter_repo.delete_by_comic_id(existing_comic['_id'])
+            self.comic_repo.delete(existing_comic['_id'])
+
+        # Carica metadati del fumetto
+        metadata_path = os.path.join(comic_path, "metadata.json")
+        if os.path.exists(metadata_path):
+            metadata = load_json(metadata_path)
+        else:
+            metadata = extract_metadata_from_filename(comic_id)
+
+        # Crea nuovo fumetto con hash
+        comic = Comic(
+            title=metadata.get("title", comic_id),
+            original_title=metadata.get("original_title"),
+            author=metadata.get("author"),
+            plot=metadata.get("plot"),
+            year=metadata.get("year"),
+            genres=metadata.get("genres", []),
+            status=metadata.get("status"),
+            language=metadata.get("language", None),
+            cover=metadata.get("cover"),
+            tags=metadata.get("tags", []),
+            version=metadata.get("version", None),
+            path=comic_path,
+            content_hash=content_hash
+        )
+        saved_comic_id = self.comic_repo.save(comic)
+
+        # Estrai il valore RTL di default del fumetto
+        comic_rtl_default = metadata.get("rtl", True)
+
+        # Processa capitoli con hash individuali
+        self._process_chapters_with_hash(comic_path, saved_comic_id, comic_rtl_default)
+
+    def _process_chapters_with_hash(self, comic_path, comic_id, comic_rtl_default):
+        """Processa i capitoli calcolando hash individuali"""
+        for entry in os.listdir(comic_path):
+            entry_path = os.path.join(comic_path, entry)
+            
+            # Controlla se è un file archivio singolo
+            if os.path.isfile(entry_path) and self._is_archive_file(entry):
+                chapter_hash = calculate_chapter_hash(entry_path, is_archive=True)
+                self._register_archive_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash)
+            elif os.path.isdir(entry_path):
+                if self._is_chapter(entry_path):
+                    chapter_hash = calculate_chapter_hash(entry_path, is_archive=False)
+                    self._register_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash)
+                else:
+                    # Assume che sia una cartella volume
+                    self._process_volume_with_hash(entry_path, comic_id, comic_rtl_default)
+
+    def _process_volume_with_hash(self, volume_path, comic_id, comic_rtl_default):
+        """Processa i capitoli dentro una cartella volume con hash"""
+        volume_folder = os.path.basename(volume_path)
+        
+        for entry in os.listdir(volume_path):
+            entry_path = os.path.join(volume_path, entry)
+            
+            if os.path.isfile(entry_path) and self._is_archive_file(entry):
+                chapter_hash = calculate_chapter_hash(entry_path, is_archive=True)
+                self._register_archive_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash, volume_folder)
+            elif os.path.isdir(entry_path):
+                chapter_hash = calculate_chapter_hash(entry_path, is_archive=False)
+                self._register_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash, volume_folder)
+
+    def _register_chapter_with_hash(self, chapter_path, comic_id, comic_rtl_default, content_hash, volume_folder=None):
+        """Registra un capitolo da directory con hash"""
+        metadata_path = os.path.join(chapter_path, "metadata.json")
+        if os.path.exists(metadata_path):
+            metadata = load_json(metadata_path)
+            chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
+            chapter_title = metadata.get("title", f"Chapter {chapter_number}")
+            page_count = metadata.get("page_count", None)
+            language = metadata.get("language")
+            publication_date = metadata.get("publication_date")
+            rtl = metadata.get("rtl", comic_rtl_default)
+        else:
+            chapter_number = self._extract_chapter_number(chapter_path)
+            chapter_title = f"Chapter {chapter_number}"
+            page_count = None
+            language = "unknown"
+            publication_date = None
+            rtl = comic_rtl_default
+        
+        # Conta le pagine se non specificato nei metadati
+        if page_count is None:
+            page_count = len(list_images(chapter_path, is_archive=False))
+
+        chapter_path = os.path.join(volume_folder, os.path.basename(chapter_path)) if volume_folder else os.path.basename(chapter_path)
+
+        chapter = Chapter(
+            comic_id=comic_id,
+            number=chapter_number,
+            title=chapter_title,
+            filename=chapter_path,
+            page_count=page_count,
+            language=language,
+            publication_date=publication_date,
+            is_archive=False,
+            rtl=rtl,
+            content_hash=content_hash
+        )
+        self.chapter_repo.save(chapter)
+
+    def _register_archive_chapter_with_hash(self, archive_path, comic_id, comic_rtl_default, content_hash, volume_folder=None):
+        """Registra un capitolo da archivio con hash"""
+        archive_name = os.path.basename(archive_path)
+        chapter_number = self._extract_chapter_number(archive_name)
+        chapter_title = f"Chapter {chapter_number}"
+        
+        # Conta le pagine nell'archivio
+        try:
+            page_count = len(list_images(archive_path, is_archive=True))
+        except Exception as e:
+            self.logger.error(f"Errore nel contare le pagine dell'archivio {archive_path}: {e}")
+            page_count = 0
+        
+        filename = os.path.join(volume_folder, archive_name) if volume_folder else archive_name
+        
+        chapter = Chapter(
+            comic_id=comic_id,
+            number=chapter_number,
+            title=chapter_title,
+            filename=filename,
+            page_count=page_count,
+            language="unknown",
+            publication_date=None,
+            is_archive=True,
+            rtl=comic_rtl_default,
+            content_hash=content_hash
+        )
+        self.chapter_repo.save(chapter)

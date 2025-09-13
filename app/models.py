@@ -1,7 +1,7 @@
 from app.utils import generate_slug
 
 class Comic:
-    def __init__(self, title, original_title, author, plot, year, genres, status, language, cover, tags, path, version=None, chapters=None):
+    def __init__(self, title, original_title, author, plot, year, genres, status, language, cover, tags, path, version=None, chapters=None, content_hash=None):
         self.title = title
         self.original_title = original_title
         self.author = author if author else "Unknown"
@@ -16,12 +16,13 @@ class Comic:
         self.version = version
         self.slug = generate_slug(title, language, version)
         self.chapters = chapters or []
+        self.content_hash = content_hash
 
     def __str__(self) -> str:
         return f"Comic(title={self.title}, author={self.author}, year={self.year}, path={self.path})"
 
 class Chapter:
-    def __init__(self, comic_id, title, number, filename, page_count, is_archive, language, publication_date, rtl):
+    def __init__(self, comic_id, title, number, filename, page_count, is_archive, language, publication_date, rtl, content_hash=None):
         self.comic_id = comic_id
         self.title = title
         self.number = number
@@ -31,6 +32,7 @@ class Chapter:
         self.language = language
         self.publication_date = publication_date
         self.rtl = rtl
+        self.content_hash = content_hash
 
     def __str__(self) -> str:
         return f"Chapter(title={self.title}, number={self.number}, comic_id={self.comic_id}, pages={self.page_count}, rtl={self.rtl}, filename={self.filename})"

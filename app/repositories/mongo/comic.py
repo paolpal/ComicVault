@@ -23,7 +23,8 @@ class ComicRepository:
             'cover': comic.cover,
             'slug': comic.slug,
             'version': comic.version,
-            'tags': comic.tags
+            'tags': comic.tags,
+            'content_hash': comic.content_hash
         }
         result = self.mongo.db["comics"].insert_one(comic_data)
         return result.inserted_id
@@ -70,3 +71,26 @@ class ComicRepository:
         """
         self.mongo.db["comics"].drop()
         return True
+
+    def get_by_path(self, path):
+        """
+        Recupera un fumetto dal database dato il suo percorso.
+        """
+        return self.mongo.db["comics"].find_one({'path': path})
+
+    def update_hash(self, comic_id, new_hash):
+        """
+        Aggiorna solo l'hash di un fumetto esistente.
+        """
+        result = self.mongo.db["comics"].update_one(
+            {'_id': ObjectId(comic_id)},
+            {'$set': {'content_hash': new_hash}}
+        )
+        return result.modified_count > 0
+
+    def delete(self, comic_id):
+        """
+        Elimina un fumetto dal database dato il suo ID.
+        """
+        result = self.mongo.db["comics"].delete_one({'_id': ObjectId(comic_id)})
+        return result.deleted_count > 0
