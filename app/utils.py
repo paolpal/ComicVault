@@ -58,7 +58,7 @@ def save_image(image, path):
         os.makedirs(directory)
     image.save(path)
 
-def extract_metadata_from_filename(filename):
+def extract_metadata_from_filename(filename) -> dict:
     """
     Estrae i metadati dal nome del file, come il titolo e l'autore.
 
@@ -133,7 +133,7 @@ def list_images(path, is_archive=False):
     return images
 
 # app/utils.py
-def load_json(path):
+def load_json(path) -> dict:
     with open(path, encoding='utf-8') as f:
         return json.load(f)
 
