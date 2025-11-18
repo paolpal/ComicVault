@@ -257,9 +257,9 @@ class OptimizedComicScanner(ComicScanner):
 
         # Rimuovi il fumetto esistente e i suoi capitoli se presente
         existing_comic = self.comic_repo.get_by_path(comic_path)
-        if existing_comic:
-            self.chapter_repo.delete_by_comic_id(existing_comic['_id'])
-            self.comic_repo.delete(existing_comic['_id'])
+        if existing_comic and existing_comic.id is not None:
+            self.chapter_repo.delete_by_comic_id(existing_comic.id)
+            self.comic_repo.delete(existing_comic.id)
 
         # Carica metadati del fumetto
         metadata_path = os.path.join(comic_path, "metadata.json")
