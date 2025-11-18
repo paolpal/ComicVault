@@ -22,12 +22,12 @@ class Comic:
         self.id = _id
         self.title = title
         self.original_title = original_title
-        self.author = author if author else "Unknown"
+        self.author = author if author else ""
         self.plot = plot
-        self.year = year if year else "Unknown"
+        self.year = year if year else ""
         self.genres = genres
         self.status = status
-        self.language = language if language else None
+        self.language = language if language else ""
         self.cover = cover
         self.tags = tags
         self.path = path
@@ -47,7 +47,18 @@ class Comic:
         return f"Comic(title={self.title}, author={self.author}, year={self.year}, path={self.path})"
 
 class Chapter:
-    def __init__(self, comic_id, title:str, number:int|str, seq_number:int, filename:str, page_count:int, is_archive:bool, language:Optional[str], publication_date:Optional[str], rtl:bool, content_hash=None):
+    def __init__(self, 
+                 comic_id, 
+                 title:str, 
+                 number:int|str, 
+                 seq_number:int, 
+                 filename:str, 
+                 page_count:int, 
+                 is_archive:bool, 
+                 language:Optional[str], 
+                 publication_date:Optional[str], 
+                 rtl:bool, 
+                 content_hash=None):
         self.comic_id = comic_id
         self.title = title
         self.number = number

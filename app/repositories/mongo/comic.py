@@ -8,13 +8,13 @@ class ComicRepository:
     def __init__(self, mongo):
         self.mongo = mongo
 
-    def save(self, comic) -> bool:
+    def save(self, comic) -> ObjectId:
         """
         Salva un fumetto nel database.
         """
         comic_data = comic.__dict__
         result = self.mongo.db["comics"].insert_one(comic_data)
-        return result.inserted_id > 0
+        return result.inserted_id
 
     def get_by_id(self, comic_id:str) -> Optional[Comic]:
         """

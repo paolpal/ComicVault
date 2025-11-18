@@ -58,9 +58,13 @@
                 <div class="comic-title">{{ comic.title }}</div>
                 <div class="comic-meta">
                     <p>Author: {{ comic.author }}</p>
-                    <p>Original Title: {{ comic.original_title }}</p>
+                    {% if comic.original_title is defined and comic.original_title != '' %}
+                        <p>Original Title: {{ comic.original_title }}</p>
+                    {% endif %}
                     <p>Plot: {{ comic.plot }}</p>
-                    <p>Year: {{ comic.year }}</p>
+                    {% if comic.year is defined and comic.year != '' %}
+                        <p>Year: {{ comic.year }}</p>
+                    {% endif %}
                     <p>Genres: 
                         {% for genre in comic.genres %}
                             <span class="genre">{{ genre }}</span>{% if not loop.last %}, {% endif %}
