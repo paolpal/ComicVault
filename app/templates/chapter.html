@@ -20,15 +20,15 @@
             <div class="nav-icon">
                 <i class="fas fa-bars"></i>
             </div>
-            <div class="title">Chapter {{ chapter.number }} - {{ chapter.title }}</div>
+            <div class="title">{{ chapter.title }}</div>
         </div>
         <div class="nav-icons">
-            <a href="{{ prev and url_for('view_chapter', comic_slug=comic.slug, chapter_number=prev) or '#' }}"
+            <a href="{{ prev and url_for('view_chapter', comic_slug=comic.slug, chapter_seq_number=prev) or '#' }}"
             class="{{ '' if prev else 'disabled' }}">
                 <i class="fa-solid fa-backward"></i>
             </a>
 
-            <a href="{{ next and url_for('view_chapter', comic_slug=comic.slug, chapter_number=next) or '#' }}"
+            <a href="{{ next and url_for('view_chapter', comic_slug=comic.slug, chapter_seq_number=next) or '#' }}"
             class="{{ '' if next else 'disabled' }}">
                 <i class="fa-solid fa-forward"></i>
             </a>
@@ -51,7 +51,7 @@
 			<div class="carousel-inner" dir="{{ 'rtl' if chapter.rtl else 'ltr' }}">
 				{% for page_number in range(images) %}
                     <div class="carousel-item">
-                        <img src="{{ url_for('view_page', comic_slug=comic.slug, chapter_number=chapter.number, page_number=page_number) }}" alt="Page {{ page_number + 1 }}">
+                        <img src="{{ url_for('view_page', comic_slug=comic.slug, chapter_seq_number=chapter.seq_number, page_number=page_number) }}" alt="Page {{ page_number + 1 }}">
                     </div>
                 {% endfor %}
 			</div>

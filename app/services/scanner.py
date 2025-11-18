@@ -7,6 +7,8 @@ from app.utils import allowed_file, list_images, extract_metadata_from_filename,
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
 
+logger = logging.getLogger(__name__)
+
 class ComicScanner:
     def __init__(self, root_path, mongo):
         """
@@ -40,14 +42,14 @@ class ComicScanner:
 
         comic = Comic(
             title=metadata.get("title", comic_id),
-            original_title=metadata.get("original_title"),
-            author=metadata.get("author"),
-            plot=metadata.get("plot"),
-            year=metadata.get("year"),
+            original_title=metadata.get("originalTitle", ""),
+            author=metadata.get("author", ""),
+            plot=metadata.get("plot", ""),
+            year=metadata.get("year", ""),
             genres=metadata.get("genres", []),
-            status=metadata.get("status"),
-            language=metadata.get("language", None),
-            cover=metadata.get("cover"),
+            status=metadata.get("status", ""),
+            language=metadata.get("language", ""),
+            cover=metadata.get("cover", ""),
             tags=metadata.get("tags", []),
             version=metadata.get("version", None),
             path=comic_path
@@ -101,16 +103,18 @@ class ComicScanner:
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
             chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
+            seq_number = metadata.get("seqNumber", chapter_number)
             chapter_title = metadata.get("title", f"Chapter {chapter_number}")
-            page_count = metadata.get("page_count", None)
+            page_count = metadata.get("pageCount", None)
             language = metadata.get("language")
-            publication_date = metadata.get("publication_date")
+            publication_date = metadata.get("publicationDate")
             # RTL: usa quello del capitolo se specificato, altrimenti quello del fumetto
             rtl = metadata.get("rtl", comic_rtl_default)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
-            chapter_title = f"Chapter {chapter_number}"
+            seq_number = chapter_number
             page_count = None
+            chapter_title = f"Chapter {chapter_number}"
             language = "unknown"
             publication_date = None
             # Se non ci sono metadati, usa quello del fumetto
@@ -125,6 +129,7 @@ class ComicScanner:
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
+            seq_number=seq_number,
             title=chapter_title,
             filename=chapter_path,
             page_count=page_count,
@@ -155,6 +160,7 @@ class ComicScanner:
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
+            seq_number=chapter_number,
             title=chapter_title,
             filename=filename,
             page_count=page_count,
@@ -188,6 +194,10 @@ class OptimizedComicScanner(ComicScanner):
         
         comics_processed = 0
         comics_skipped = 0
+        comics_removed = 0
+        
+        # Prima rimuovi i fumetti che non esistono più sul filesystem
+        comics_removed = self._remove_deleted_comics()
         
         for comic_folder in os.listdir(self.root_path):
             comic_path = os.path.join(self.root_path, comic_folder)
@@ -195,11 +205,12 @@ class OptimizedComicScanner(ComicScanner):
                 try:
                     # Calcola hash del fumetto
                     current_hash = calculate_comic_hash(comic_path)
-                    
+                    self.logger.info(f"Hash del fumetto {comic_folder}: {current_hash}")
+
                     # Controlla se il fumetto esiste già nel database
                     existing_comic = self.comic_repo.get_by_path(comic_path)
                     
-                    if not existing_comic or existing_comic.get('content_hash') != current_hash:
+                    if not existing_comic or existing_comic.content_hash != current_hash:
                         self.logger.info(f"Processando fumetto modificato: {comic_folder}")
                         self._process_comic_with_hash(comic_path, current_hash)
                         comics_processed += 1
@@ -213,7 +224,32 @@ class OptimizedComicScanner(ComicScanner):
                     self._process_comic(comic_path)
                     comics_processed += 1
         
-        self.logger.info(f"Scansione completata: {comics_processed} processati, {comics_skipped} saltati")
+        self.logger.info(f"Scansione completata: {comics_processed} processati, {comics_skipped} saltati, {comics_removed} rimossi")
+
+    def _remove_deleted_comics(self):
+        """Rimuove dal database i fumetti che non esistono più sul filesystem"""
+        removed_count = 0
+        
+        # Ottieni tutti i fumetti dal database
+        all_comics = list(self.comic_repo.list_all())
+        
+        for comic in all_comics:
+            comic_path = comic.path
+            if comic_path and not os.path.exists(comic_path) and comic.id is not None:
+                self.logger.info(f"Rimuovendo fumetto eliminato dal filesystem: {comic.title} ({comic_path})")
+                
+                # Rimuovi prima tutti i capitoli del fumetto
+                self.chapter_repo.delete_by_comic_id(comic.id)
+                
+                # Poi rimuovi il fumetto stesso
+                self.comic_repo.delete(comic.id)
+                
+                removed_count += 1
+        
+        if removed_count > 0:
+            self.logger.info(f"Rimossi {removed_count} fumetti eliminati dal filesystem")
+        
+        return removed_count
 
     def _process_comic_with_hash(self, comic_path, content_hash):
         """Processa un fumetto aggiornando solo i capitoli modificati"""
@@ -235,19 +271,21 @@ class OptimizedComicScanner(ComicScanner):
         # Crea nuovo fumetto con hash
         comic = Comic(
             title=metadata.get("title", comic_id),
-            original_title=metadata.get("original_title"),
-            author=metadata.get("author"),
-            plot=metadata.get("plot"),
-            year=metadata.get("year"),
+            original_title=metadata.get("original_title", ""),
+            author=metadata.get("author", ""),
+            plot=metadata.get("plot", ""),
+            year=metadata.get("year", ""),
             genres=metadata.get("genres", []),
-            status=metadata.get("status"),
-            language=metadata.get("language", None),
-            cover=metadata.get("cover"),
+            status=metadata.get("status", ""),
+            language=metadata.get("language", ""),
+            cover=metadata.get("cover", ""),
             tags=metadata.get("tags", []),
             version=metadata.get("version", None),
             path=comic_path,
             content_hash=content_hash
         )
+
+        logger.info(f"Registrando fumetto: {comic.title} con hash {content_hash}")
         saved_comic_id = self.comic_repo.save(comic)
 
         # Estrai il valore RTL di default del fumetto
@@ -293,6 +331,7 @@ class OptimizedComicScanner(ComicScanner):
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
             chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
+            seq_number = metadata.get("seqNumber", chapter_number)
             chapter_title = metadata.get("title", f"Chapter {chapter_number}")
             page_count = metadata.get("page_count", None)
             language = metadata.get("language")
@@ -300,6 +339,7 @@ class OptimizedComicScanner(ComicScanner):
             rtl = metadata.get("rtl", comic_rtl_default)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
+            seq_number = chapter_number
             chapter_title = f"Chapter {chapter_number}"
             page_count = None
             language = "unknown"
@@ -315,6 +355,7 @@ class OptimizedComicScanner(ComicScanner):
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
+            seq_number=seq_number,
             title=chapter_title,
             filename=chapter_path,
             page_count=page_count,
@@ -344,6 +385,7 @@ class OptimizedComicScanner(ComicScanner):
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
+            seq_number=chapter_number,
             title=chapter_title,
             filename=filename,
             page_count=page_count,
