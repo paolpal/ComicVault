@@ -23,7 +23,7 @@ class ChapterRepository:
         )
         return result.modified_count > 0
 
-    def get_by_number(self, comic_slug:str, seq_number:int) -> Optional[Chapter]:
+    def get_by_number(self, comic_slug:str, seq_number:int|float) -> Optional[Chapter]:
         """
         Trova un capitolo specifico basato sul numero del capitolo per un fumetto specifico.
 
@@ -33,7 +33,7 @@ class ChapterRepository:
         """
         # Query MongoDB per trovare il capitolo specifico nel fumetto
         comic = self.mongo.db["comics"].find_one(
-            {'slug': comic_slug, 'chapters.seq_number': seq_number},
+            {'slug': comic_slug, 'chapters.seq_number': float(seq_number)},
             {'chapters.$': 1}
         )
 

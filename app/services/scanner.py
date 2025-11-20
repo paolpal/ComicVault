@@ -103,7 +103,7 @@ class ComicScanner:
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
             chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
-            seq_number = metadata.get("seqNumber", chapter_number)
+            seq_number = float(metadata.get("seqNumber", chapter_number))
             chapter_title = metadata.get("title", f"Chapter {chapter_number}")
             page_count = metadata.get("pageCount", None)
             language = metadata.get("language")
@@ -112,7 +112,7 @@ class ComicScanner:
             rtl = metadata.get("rtl", comic_rtl_default)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
-            seq_number = chapter_number
+            seq_number = float(chapter_number)
             page_count = None
             chapter_title = f"Chapter {chapter_number}"
             language = "unknown"
@@ -160,7 +160,7 @@ class ComicScanner:
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
-            seq_number=chapter_number,
+            seq_number=float(chapter_number),
             title=chapter_title,
             filename=filename,
             page_count=page_count,
@@ -331,7 +331,7 @@ class OptimizedComicScanner(ComicScanner):
         if os.path.exists(metadata_path):
             metadata = load_json(metadata_path)
             chapter_number = metadata.get("number", self._extract_chapter_number(chapter_path))
-            seq_number = metadata.get("seqNumber", chapter_number)
+            seq_number = float(metadata.get("seqNumber", chapter_number))
             chapter_title = metadata.get("title", f"Chapter {chapter_number}")
             page_count = metadata.get("page_count", None)
             language = metadata.get("language")
@@ -339,7 +339,7 @@ class OptimizedComicScanner(ComicScanner):
             rtl = metadata.get("rtl", comic_rtl_default)
         else:
             chapter_number = self._extract_chapter_number(chapter_path)
-            seq_number = chapter_number
+            seq_number = float(chapter_number)
             chapter_title = f"Chapter {chapter_number}"
             page_count = None
             language = "unknown"
@@ -385,7 +385,7 @@ class OptimizedComicScanner(ComicScanner):
         chapter = Chapter(
             comic_id=comic_id,
             number=chapter_number,
-            seq_number=chapter_number,
+            seq_number=float(chapter_number),
             title=chapter_title,
             filename=filename,
             page_count=page_count,

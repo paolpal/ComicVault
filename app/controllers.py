@@ -6,8 +6,10 @@ from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
 from app.services import ComicScanner, OptimizedComicScanner, ComicService
+from app.utils import convert_webp
 from PIL import Image
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ class ComicController:
         
         return render_template('comic.html', comic=comic, chapters=chapters, page_number=page_number, total_pages=total_pages)
 
-    @app.route('/comic/<string:comic_slug>/chapter/<int:chapter_seq_number>', methods=['GET'])
+    @app.route('/comic/<string:comic_slug>/chapter/<float:chapter_seq_number>', methods=['GET'])
     def view_chapter(comic_slug, chapter_seq_number):
         """
         Visualizza le immagini di un capitolo specifico del fumetto.
@@ -73,7 +75,7 @@ class ComicController:
         """
 
         comic_slug = str(comic_slug)
-        chapter_seq_number = int(chapter_seq_number)
+        chapter_seq_number = float(chapter_seq_number)
 
         # Recupera il fumetto dal database
         comic_repo = ComicRepository(mongo)
@@ -84,7 +86,6 @@ class ComicController:
             abort(404, description="Fumetto non trovato.")        
 
         logger.info(f"Requesting chapter {chapter_seq_number} for comic {comic_slug}")
-        chapter_seq_number = int(chapter_seq_number)
 
         # Recupera il capitolo dal database
         chapter = chapter_repo.get_by_number(comic_slug, chapter_seq_number)
@@ -104,7 +105,7 @@ class ComicController:
 
         return render_template('chapter.html', comic=comic, chapter=chapter, images=images, page=page, prev=prev_ch, next=next_ch)
 
-    @app.route('/comic/<string:comic_slug>/chapter/<int:chapter_seq_number>/<int:page_number>')
+    @app.route('/comic/<string:comic_slug>/chapter/<float:chapter_seq_number>/<int:page_number>')
     def view_page(comic_slug, chapter_seq_number, page_number):
         """
         Visualizza una pagina specifica di un capitolo di un fumetto.
@@ -112,7 +113,7 @@ class ComicController:
         print(f"Requesting page {page_number} of chapter {chapter_seq_number} for comic {comic_slug}")
         try:
             comic_slug = str(comic_slug)
-            chapter_seq_number = int(chapter_seq_number)
+            chapter_seq_number = float(chapter_seq_number)
             page_number = int(page_number)
             result = ComicService.get_page_image(comic_slug, chapter_seq_number, page_number)
             if result is None:
@@ -144,25 +145,58 @@ class ComicController:
             else:
                 cover_url = comic['cover']
                 logger.info(f"Cover URL: {cover_url}")
+                
+                # Gestione cover remote
                 if cover_url.startswith('http://') or cover_url.startswith('https://'):
-                    return redirect(cover_url)
+                    logger.info(f"Fetching remote cover: {cover_url}")
+                    response = requests.get(cover_url, timeout=10)
+                    response.raise_for_status()
+                    
+                    image_data = response.content
+                    content_type = response.headers.get('Content-Type', '')
+                    
+                    # Controlla se è WebP
+                    if 'webp' in content_type.lower() or cover_url.lower().endswith('.webp'):
+                        logger.info("Converting WebP to JPG/PNG")
+                        converted_data, ext = convert_webp(image_data)
+                        mimetype = 'image/png' if ext == '.png' else 'image/jpeg'
+                        return send_file(BytesIO(converted_data), mimetype=mimetype)
+                    else:
+                        # Restituisci l'immagine così com'è
+                        mimetype = content_type if content_type.startswith('image/') else 'image/jpeg'
+                        return send_file(BytesIO(image_data), mimetype=mimetype)
                 else:
-                    cover_url = os.path.join(comic['path'], cover_url)
-                    logger.info(f"Cover URL is not a valid external link: {cover_url}")
-                    #raise FileNotFoundError(f"Cover URL is not a valid external link: {cover_url}")
-                    return send_file(cover_url, mimetype='image/jpeg')
+                    # Cover locale
+                    cover_path = os.path.join(comic['path'], cover_url)
+                    logger.info(f"Serving local cover: {cover_path}")
+                    
+                    # Controlla se è WebP locale
+                    if cover_path.lower().endswith('.webp'):
+                        with open(cover_path, 'rb') as f:
+                            webp_data = f.read()
+                        converted_data, ext = convert_webp(webp_data)
+                        mimetype = 'image/png' if ext == '.png' else 'image/jpeg'
+                        return send_file(BytesIO(converted_data), mimetype=mimetype)
+                    else:
+                        return send_file(cover_path, mimetype='image/jpeg')
+                        
+        except requests.RequestException as e:
+            logger.error(f"Error fetching remote cover for comic {comic_slug}: {e}")
+            # Fallback a immagine di default
+            cover_url = url_for('static', filename='images/comic.jpg')
+            return redirect(cover_url)
         except Exception as e:
             logger.error(f"Error while retrieving cover for comic {comic_slug}: {e}")
             abort(500, description=str(e))
 
-    @app.route('/comic/<string:comic_slug>/<int:chapter_seq_number>/cover')
+    @app.route('/comic/<string:comic_slug>/<float:chapter_seq_number>/cover')
     def view_cover(comic_slug, chapter_seq_number):
         """
         Visualizza una pagina specifica di un capitolo di un fumetto con qualità ridotta.
         """
         print(f"Requesting cover for comic {comic_slug}, chapter {chapter_seq_number}")
         try:
-            chapter_seq_number = int(chapter_seq_number)
+            chapter_seq_number = float(chapter_seq_number)
             comic_slug = str(comic_slug)
             # Ottieni i dati dell'immagine e il tipo MIME dal servizio
             result = ComicService.get_page_image(comic_slug, chapter_seq_number, 0)

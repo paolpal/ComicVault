@@ -2,6 +2,7 @@ import os
 import zipfile
 import rarfile
 import io
+from typing import Tuple
 from PIL import Image
 from flask import current_app
 import json
@@ -246,3 +247,40 @@ def calculate_chapter_hash(chapter_path, is_archive=False):
             hash_md5.update(os.path.basename(chapter_path).encode('utf-8'))
     
     return hash_md5.hexdigest()
+
+def convert_webp(webp: bytes) -> Tuple[bytes, str]:
+    """
+    Converte un WebP in JPG o PNG in base alle sue caratteristiche.
+    - Se il WebP è lossy → JPG
+    - Se ha canale alpha o è lossless → PNG
+    """
+
+    # Apri l'immagine
+    im = Image.open(io.BytesIO(webp))
+
+    # Leggi proprietà WebP
+    info = im.info
+
+    has_alpha = im.mode in ("RGBA", "LA") or info.get("alpha", False)
+    is_lossless = info.get("lossless", False)
+
+    # Decidi formato di output
+    if has_alpha or is_lossless:
+        # PNG mantiene la trasparenza e la qualità lossless
+        format_out = "PNG"
+        ext = ".png"
+    else:
+        # JPG è ideale per WebP lossy
+        format_out = "JPEG"
+        ext = ".jpg"
+
+    # Conversione
+    if format_out == "JPEG":
+        # JPEG non supporta trasparenza: converti in RGB
+        im = im.convert("RGB")
+
+    output_buffer = io.BytesIO()
+    im.save(output_buffer, format_out)
+    output_bytes = output_buffer.getvalue()
+
+    return output_bytes, ext

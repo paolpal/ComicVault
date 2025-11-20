@@ -51,7 +51,7 @@ class Chapter:
                  comic_id, 
                  title:str, 
                  number:int|str, 
-                 seq_number:int, 
+                 seq_number:int|float, 
                  filename:str, 
                  page_count:int, 
                  is_archive:bool, 
@@ -62,7 +62,7 @@ class Chapter:
         self.comic_id = comic_id
         self.title = title
         self.number = number
-        self.seq_number = seq_number if seq_number is not None else number
+        self.seq_number = float(seq_number) if seq_number is not None else float(number)
         self.filename = filename  # Percorso dell'archivio o della directory
         self.page_count = page_count
         self.is_archive = is_archive  # Indica se il percorso è un archivio

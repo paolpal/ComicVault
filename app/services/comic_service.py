@@ -29,7 +29,7 @@ class ComicService:
             return cover_path, ComicService._get_mimetype(cover_url)
 
     @staticmethod
-    def get_page_image(comic_slug:str, chapter_seq_number:int, page_number:int):
+    def get_page_image(comic_slug:str, chapter_seq_number:int|float, page_number:int):
         """
         Recupera l'immagine di una specifica pagina di un capitolo di un fumetto.
 
@@ -45,7 +45,7 @@ class ComicService:
             raise FileNotFoundError("Fumetto non trovato")
 
         chapter_repo = ChapterRepository(mongo)
-        chapter = chapter_repo.get_by_number(comic_slug, chapter_seq_number)
+        chapter = chapter_repo.get_by_number(comic_slug, float(chapter_seq_number))
 
         print(f"Comic path: {comic['path']}")
         print(f"Chapter number: {chapter_seq_number}, Page number: {page_number}")
