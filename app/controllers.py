@@ -1,6 +1,7 @@
 from io import BytesIO
 import os
-from flask import render_template, redirect, send_file, url_for, abort
+import threading
+from flask import render_template, redirect, send_file, url_for, abort, flash
 from app import app, mongo
 from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
@@ -223,9 +224,27 @@ class ComicController:
         
     @app.route('/scan')
     def scan_comics():
-        directory_to_scan = app.config['COMICS_FOLDER'] 
-        scanner = OptimizedComicScanner(directory_to_scan, mongo)
-        scanner.scan_and_register_comics()
+        """
+        Avvia la scansione dei fumetti in background.
+        Restituisce immediatamente una risposta per evitare timeout.
+        """
+        directory_to_scan = app.config['COMICS_FOLDER']
+        
+        def scan_in_background():
+            """Funzione eseguita in background per la scansione."""
+            try:
+                logger.info("Starting background comic scan...")
+                scanner = OptimizedComicScanner(directory_to_scan, mongo)
+                scanner.scan_and_register_comics()
+                logger.info("Background comic scan completed successfully")
+            except Exception as e:
+                logger.error(f"Error during background scan: {e}", exc_info=True)
+        
+        # Avvia la scansione in un thread separato
+        scan_thread = threading.Thread(target=scan_in_background, daemon=True)
+        scan_thread.start()
+        
+        logger.info("Scan started in background")
         return redirect(url_for('index'))
 
 

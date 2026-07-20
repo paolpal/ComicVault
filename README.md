@@ -43,19 +43,19 @@ In questa modalità:
 ### Avviare l'app
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file env/private.env up
 ```
 
 ### Avviare in background
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file env/private.env up -d
 ```
 
 ### Ricostruire l'immagine (solo se cambi `requirements.txt` o `Dockerfile`)
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file env/private.env up --build
 ```
 
 ### Fermare i container

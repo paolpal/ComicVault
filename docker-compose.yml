@@ -25,6 +25,19 @@ services:
     networks:
       - comic-vault-network
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: comic-vault-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - comic-vault
+    networks:
+      - comic-vault-network
+
+
 networks:
   comic-vault-network:
 
