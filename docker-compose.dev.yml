@@ -9,3 +9,6 @@ services:
       - .:/app
       - ${COMICS_VOLUME_PATH:-${HOME}/Comics}:/data/comics
     command: python -m flask run --host=0.0.0.0 --port=5000 --reload
+
+  tunnel:
+    profiles: ["disabled"]
