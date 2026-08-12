@@ -13,8 +13,9 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body>
+<body hx-boost="true">
     <div class="navbar">
         <div class="nav-left">
             <div class="nav-icon">
