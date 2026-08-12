@@ -107,7 +107,14 @@ if (("standalone" in window.navigator) && window.navigator.standalone) {
     
     if (node && node.nodeName === "A" && node.getAttribute("href")) {
       var href = node.getAttribute("href");
-      if (!href || href.indexOf("#") === 0 || href.indexOf("javascript:") === 0) return;
+      
+      // Se è un link placeholder (es. href="#"), blocchiamo comunque il comportamento
+      // di default per evitare che iOS apra Safari, ma non navighiamo da nessuna parte.
+      if (!href || href.indexOf("#") === 0 || href.indexOf("javascript:") === 0) {
+        event.preventDefault();
+        return;
+      }
+      
       if (node.getAttribute("target") === "_blank") return;
 
       event.preventDefault();
