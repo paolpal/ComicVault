@@ -34,7 +34,7 @@
             </a>
 
             <a href="{{ url_for('view_comic', comic_slug=comic.slug, page_number=page) }}"><i class="fa-solid fa-arrow-left"></i></a>
-            <a href="#"><i class="fas fa-sign-out-alt"></i></a>
+            <a href="#" id="fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand" id="fullscreen-icon"></i></a>
         </div>
     </div>
     <div class="sidebar">
@@ -74,5 +74,6 @@
     </script>
 
     
+    <script src="{{ url_for('static', filename='js/fullscreen.js') }}"></script>
 </body>
 </html>

@@ -39,7 +39,7 @@
             {% endif %}
             <!--FINE NAVIGAZIONE-->
             <a href="{{ url_for('index')}}"><i class="fa-solid fa-arrow-left"></i></a>
-            <a href="#"><i class="fas fa-sign-out-alt"></i></a>
+            <a href="#" id="fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand" id="fullscreen-icon"></i></a>
         </div>
     </div>
     <div class="sidebar">
@@ -86,5 +86,6 @@
             <!-- Aggiungere altri capitoli come necessario -->
         </div>
     </div>
+    <script src="{{ url_for('static', filename='js/fullscreen.js') }}"></script>
 </body>
 </html>
