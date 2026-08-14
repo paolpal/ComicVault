@@ -1,0 +1,15 @@
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Settings</h2>
+        <div class="settings-option">
+            <label>Image Resolution</label>
+            <p style="font-size: 0.8em; color: #ccc;">Lower resolution saves memory and is faster on older devices.</p>
+            <button class="res-btn" data-res="low">Low (Fastest)</button>
+            <button class="res-btn" data-res="medium">Medium</button>
+            <button class="res-btn" data-res="high">High (Original)</button>
+        </div>
+    </div>
+</div>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=1"></script>

@@ -1,7 +1,7 @@
 from io import BytesIO
 import os
 import threading
-from flask import render_template, redirect, send_file, url_for, abort, flash
+from flask import render_template, redirect, send_file, url_for, abort, flash, request
 from app import app, mongo
 from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
@@ -120,6 +120,22 @@ class ComicController:
             if result is None:
                 abort(404, description="Pagina non trovata")
             image_data, mimetype = result
+            
+            resolution = request.cookies.get('image_resolution', 'high')
+            if resolution in ['low', 'medium']:
+                try:
+                    image = Image.open(BytesIO(image_data))
+                    max_size = 800 if resolution == 'low' else 1200
+                    image.thumbnail((max_size, max_size))
+                    buffer = BytesIO()
+                    fmt = image.format if image.format else ('PNG' if mimetype == 'image/png' else 'JPEG')
+                    image.save(buffer, format=fmt)
+                    buffer.seek(0)
+                    return send_file(buffer, mimetype=mimetype)
+                except Exception as e:
+                    logger.error(f"Error resizing image: {e}")
+                    return send_file(BytesIO(image_data), mimetype=mimetype)
+                    
             return send_file(BytesIO(image_data), mimetype=mimetype)
         except FileNotFoundError:
             abort(404, description="Pagina non trovata")
