@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continua a Leggere - Comic Vault</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav-left">
+            <div class="nav-icon">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="title">Continua a Leggere</div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div>
+            <a href="{{ url_for('index')}}"><i class="fa-solid fa-house"></i></a>
+            <a href="{{ url_for('continue_reading') }}" class="active"><i class="fa-solid fa-book-open"></i></a>
+            <a href="#"><i class="fa-solid fa-magnifying-glass fa-rotate-90"></i></a>
+            <a href="#"><i class="fa-solid fa-sliders fa-rotate-90"></i></a>
+        </div>
+        <a href="#"><i class="fa-solid fa-gear"></i></a>
+    </div>
+    <div class="content">
+        <div class="comics-grid" id="history-grid">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/fullscreen.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/continue_reading.js') }}?v=1"></script>
+    {% include 'settings.html' %}
+</body>
+</html>

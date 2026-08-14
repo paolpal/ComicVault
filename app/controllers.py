@@ -40,6 +40,13 @@ class ComicController:
 
         return render_template('home.html', comics=comics)
     
+    @app.route('/continue-reading')
+    def continue_reading():
+        """
+        Visualizza la pagina "Continua a leggere" (basata su LocalStorage).
+        """
+        return render_template('continue_reading.html')
+    
     @app.route('/comic/<string:comic_slug>')
     @app.route('/comic/<string:comic_slug>/<int:page_number>')
     def view_comic(comic_slug, page_number=1):

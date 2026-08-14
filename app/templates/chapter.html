@@ -44,7 +44,7 @@
     <div class="sidebar">
         <div>
             <a href="{{ url_for('index')}}"><i class="fa-solid fa-house"></i></a>
-            <a href="#"><i class="fa-solid fa-book-open"></i></a>
+            <a href="{{ url_for('continue_reading') }}"><i class="fa-solid fa-book-open"></i></a>
             <a href="#"><i class="fa-solid fa-magnifying-glass fa-rotate-90"></i></a>
             <a href="#"><i class="fa-solid fa-sliders fa-rotate-90"></i></a>
         </div>
@@ -65,14 +65,44 @@
 
     <script>
         $(document).ready(function(){
-            const isRtl = $('.carousel-inner').attr('dir') === 'rtl';
-	        $('.carousel-inner').slick({
+            var isRtl = $('.carousel-inner').attr('dir') === 'rtl';
+            var $carousel = $('.carousel-inner');
+
+	        $carousel.slick({
                 dots: true,
                 autoplay: false,
                 arrows: false,
                 rtl: isRtl,
                 infinite: false,
                 adaptiveHeight: false,
+            });
+
+            // Recupera progressi
+            var progressStr = localStorage.getItem('comic_progress');
+            var progress = progressStr ? JSON.parse(progressStr) : {};
+            var comicSlug = "{{ comic.slug }}";
+            
+            // Ripristina l'ultima pagina se il capitolo corrisponde
+            if (progress[comicSlug] && progress[comicSlug].chapter_seq_number == "{{ chapter.seq_number }}") {
+                if (window.location.href.indexOf('resume=true') !== -1 && progress[comicSlug].page_number) {
+                    $carousel.slick('slickGoTo', progress[comicSlug].page_number, true);
+                }
+            }
+
+            // Salva il progresso
+            $carousel.on('afterChange', function(event, slick, currentSlide){
+                progress[comicSlug] = {
+                    title: "{{ comic.title | replace('\"', '\\\"') }}",
+                    cover: "{{ url_for('view_comic_cover', comic_slug=comic.slug) }}",
+                    chapter_seq_number: "{{ chapter.seq_number }}",
+                    chapter_number: "{{ chapter.number }}",
+                    page_number: currentSlide,
+                    total_pages: slick.slideCount,
+                    timestamp: new Date().getTime(),
+                    url: "{{ url_for('view_chapter', comic_slug=comic.slug, chapter_seq_number=chapter.seq_number) }}?resume=true",
+                    comic_url: "{{ url_for('view_comic', comic_slug=comic.slug) }}"
+                };
+                localStorage.setItem('comic_progress', JSON.stringify(progress));
             });
         })
     </script>
