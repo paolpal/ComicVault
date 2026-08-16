@@ -83,7 +83,7 @@
 					<a href="{{ url_for('view_chapter', comic_slug=comic.slug, chapter_seq_number=chapter.seq_number) }}">
 						<img src="{{ url_for('view_cover', comic_slug=comic.slug, chapter_seq_number=chapter.seq_number) }}" alt="Cover">
 						<div class="chapter-title">{{ chapter.title }}</div>
-						<div class="chapter-meta">Capitolo {{ chapter.number }}</div>
+						<div class="chapter-meta">Chapter {{ chapter.number }}</div>
 					</a>
 				</div>
 			{% endfor %}

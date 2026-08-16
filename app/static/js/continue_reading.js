@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     
     if (items.length === 0) {
-        grid.innerHTML = '<div class="empty-state">Nessun fumetto in lettura su questo dispositivo.</div>';
+        grid.innerHTML = '<div class="empty-state">No reading history found on this device.</div>';
         return;
     }
     
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function() {
         html += '<a href="' + item.url + '">';
         html += '<img src="' + item.cover + '" alt="Cover">';
         html += '<div class="comic-title">' + item.title + '</div>';
-        html += '<div class="comic-meta">Cap. ' + item.chapter_number + ' - Pag. ' + (item.page_number + 1) + ' / ' + item.total_pages + '</div>';
+        html += '<div class="comic-meta">Ch. ' + item.chapter_number + ' - Pg. ' + (item.page_number + 1) + ' / ' + item.total_pages + '</div>';
         html += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width: ' + percentage + '%"></div></div>';
         html += '</a></div>';
     }

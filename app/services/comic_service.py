@@ -19,7 +19,7 @@ class ComicService:
         comic_repo = ComicRepository(mongo)
         comic = comic_repo.get_by_slug(comic_slug)
         if not comic or 'cover' not in comic:
-            raise FileNotFoundError("Fumetto o copertina non trovati")
+            raise FileNotFoundError("Comic or cover not found")
 
         cover_url = comic['cover']
         if cover_url.startswith('http://') or cover_url.startswith('https://'):
@@ -42,7 +42,7 @@ class ComicService:
         comic_repo = ComicRepository(mongo)
         comic = comic_repo.get_by_slug(comic_slug)
         if not comic:
-            raise FileNotFoundError("Fumetto non trovato")
+            raise FileNotFoundError("Comic not found")
 
         chapter_repo = ChapterRepository(mongo)
         chapter = chapter_repo.get_by_number(comic_slug, float(chapter_seq_number))
@@ -52,7 +52,7 @@ class ComicService:
         
 
         if not chapter:
-            raise FileNotFoundError("Capitolo non trovato")
+            raise FileNotFoundError("Chapter not found")
 
         # Controlla se il capitolo è un archivio o una cartella
         if chapter['is_archive']:
@@ -81,7 +81,7 @@ class ComicService:
                     mimetype = ComicService._get_mimetype(image_filename)
                     return image_data, mimetype
                 else:
-                    raise FileNotFoundError("Pagina non trovata")
+                    raise FileNotFoundError("Page not found")
         
         elif archive_path.lower().endswith(('.cbr', '.rar')):
             with rarfile.RarFile(archive_path, 'r') as archive:
@@ -92,7 +92,7 @@ class ComicService:
                     mimetype = ComicService._get_mimetype(image_filename)
                     return image_data, mimetype
                 else:
-                    raise FileNotFoundError("Pagina non trovata")
+                    raise FileNotFoundError("Page not found")
 
     @staticmethod
     def _get_image_from_directory(chapter_path, page_number):
@@ -117,7 +117,7 @@ class ComicService:
                 mimetype = ComicService._get_mimetype(image_filename)
                 return image_data, mimetype
         else:
-            raise FileNotFoundError("Pagina non trovata")
+            raise FileNotFoundError("Page not found")
 
     @staticmethod
     def _get_mimetype(filename):

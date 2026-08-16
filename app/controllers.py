@@ -58,7 +58,7 @@ class ComicController:
         comic = comic_repo.get_by_slug(comic_slug)
 
         if comic is None:
-            abort(404, description="Fumetto non trovato.")
+            abort(404, description="Comic not found.")
 
         chapters_per_page = app.config['CHAPTERS_PER_PAGE']
         offset = (page_number - 1) * chapters_per_page
@@ -91,14 +91,14 @@ class ComicController:
         comic = comic_repo.get_by_slug(comic_slug)
 
         if comic is None:
-            abort(404, description="Fumetto non trovato.")        
+            abort(404, description="Comic not found.")        
 
         logger.info(f"Requesting chapter {chapter_seq_number} for comic {comic_slug}")
 
         # Recupera il capitolo dal database
         chapter = chapter_repo.get_by_number(comic_slug, chapter_seq_number)
         if chapter is None:
-            abort(404, description="Capitolo non trovato. Non so perchè.")
+            abort(404, description="Chapter not found.")
 
         logger.info(f"Chapter retrieved: {chapter.__dict__}")
 
@@ -125,7 +125,7 @@ class ComicController:
             page_number = int(page_number)
             result = ComicService.get_page_image(comic_slug, chapter_seq_number, page_number)
             if result is None:
-                abort(404, description="Pagina non trovata")
+                abort(404, description="Page not found.")
             image_data, mimetype = result
             
             resolution = request.cookies.get('image_resolution', 'high')
@@ -145,7 +145,7 @@ class ComicController:
                     
             return send_file(BytesIO(image_data), mimetype=mimetype)
         except FileNotFoundError:
-            abort(404, description="Pagina non trovata")
+            abort(404, description="Page not found.")
         except Exception as e:
             abort(500, description=str(e))
 
@@ -162,7 +162,7 @@ class ComicController:
             logger.info(f"Comic retrieved: {comic}")
             if not comic:
                 logger.error(f"Comic with slug {comic_slug} not found.")
-                abort(404, description="Fumetto non trovato")
+                abort(404, description="Comic not found.")
             if 'cover' not in comic.__dict__ or not comic['cover']:
                 cover_url = url_for('static', filename='images/comic.jpg')
                 return redirect(cover_url)
@@ -225,7 +225,7 @@ class ComicController:
             # Ottieni i dati dell'immagine e il tipo MIME dal servizio
             result = ComicService.get_page_image(comic_slug, chapter_seq_number, 0)
             if result is None:
-                abort(404, description="Pagina non trovata")
+                abort(404, description="Page not found.")
             image_data, mimetype = result
             
             # Apri l'immagine utilizzando Pillow
@@ -240,7 +240,7 @@ class ComicController:
             return send_file(buffer, mimetype=mimetype)
         
         except FileNotFoundError:
-            abort(404, description="Pagina non trovata")
+            abort(404, description="Page not found.")
         except Exception as e:
             abort(500, description=str(e))
 
