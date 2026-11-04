@@ -4,6 +4,7 @@ services:
       context: .
       target: production
     container_name: comic-vault
+    restart: unless-stopped
     ports:
       - "25000:5000"
     environment:
@@ -20,6 +21,7 @@ services:
   comic-vault-db:
     image: mongo:4.4.22
     container_name: comic-vault-db
+    restart: unless-stopped
     volumes:
       - mongo-data:/data/db
     networks:
