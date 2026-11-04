@@ -36,6 +36,7 @@ class Comic:
         self.chapters = chapters or []
         self.chapters = [Chapter(**ch) for ch in self.chapters]
         self.content_hash = content_hash
+        self.scan_rtl_default = kwargs.get("scan_rtl_default")
 
     def __getitem__(self, key):
         return getattr(self, key)
