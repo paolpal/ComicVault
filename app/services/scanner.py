@@ -306,6 +306,10 @@ class OptimizedComicScanner(ComicScanner):
         # failure cannot erase the existing catalog entry.
         comic_id = existing_comic.id if existing_comic else ObjectId()
         chapters = []
+        rtl_default = metadata.get("rtl", True)
+        cached = {}
+        if existing_comic and getattr(existing_comic, "scan_rtl_default", None) == rtl_default:
+            cached = {chapter.filename: chapter for chapter in existing_comic.chapters}
 
         class ChapterCollector:
             def save(self, chapter):
@@ -315,12 +319,13 @@ class OptimizedComicScanner(ComicScanner):
         original_repo = self.chapter_repo
         try:
             self.chapter_repo = ChapterCollector()
-            self._process_chapters_with_hash(comic_path, comic_id, metadata.get("rtl", True))
+            self._process_chapters_with_hash(comic_path, comic_id, rtl_default, cached)
         finally:
             self.chapter_repo = original_repo
 
         comic_data = comic.__dict__.copy()
         comic_data["chapters"] = chapters
+        comic_data["scan_rtl_default"] = rtl_default
         if existing_comic:
             self.comic_repo.mongo.db["comics"].update_one(
                 {"_id": comic_id}, {"$set": comic_data}
@@ -330,24 +335,20 @@ class OptimizedComicScanner(ComicScanner):
             self.comic_repo.mongo.db["comics"].insert_one(comic_data)
         logger.info("Registrato fumetto: %s", comic.title)
 
-    def _process_chapters_with_hash(self, comic_path, comic_id, comic_rtl_default):
+    def _process_chapters_with_hash(self, comic_path, comic_id, comic_rtl_default, cached=None):
         """Processa i capitoli calcolando hash individuali"""
+        cached = cached or {}
         for entry in os.listdir(comic_path):
             entry_path = os.path.join(comic_path, entry)
-            
-            # Controlla se è un file archivio singolo
             if os.path.isfile(entry_path) and self._is_archive_file(entry):
-                chapter_hash = calculate_chapter_hash(entry_path, is_archive=True)
-                self._register_archive_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash)
+                self._reconcile_chapter(entry_path, comic_id, comic_rtl_default, cached, is_archive=True)
             elif os.path.isdir(entry_path):
                 if self._is_chapter(entry_path):
-                    chapter_hash = calculate_chapter_hash(entry_path, is_archive=False)
-                    self._register_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash)
+                    self._reconcile_chapter(entry_path, comic_id, comic_rtl_default, cached)
                 else:
-                    # Assume che sia una cartella volume
-                    self._process_volume_with_hash(entry_path, comic_id, comic_rtl_default)
+                    self._process_volume_with_hash(entry_path, comic_id, comic_rtl_default, cached)
 
-    def _process_volume_with_hash(self, volume_path, comic_id, comic_rtl_default):
+    def _process_volume_with_hash(self, volume_path, comic_id, comic_rtl_default, cached):
         """Processa i capitoli dentro una cartella volume con hash"""
         volume_folder = os.path.basename(volume_path)
         
@@ -355,11 +356,20 @@ class OptimizedComicScanner(ComicScanner):
             entry_path = os.path.join(volume_path, entry)
             
             if os.path.isfile(entry_path) and self._is_archive_file(entry):
-                chapter_hash = calculate_chapter_hash(entry_path, is_archive=True)
-                self._register_archive_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash, volume_folder)
+                self._reconcile_chapter(entry_path, comic_id, comic_rtl_default, cached, volume_folder, is_archive=True)
             elif os.path.isdir(entry_path):
-                chapter_hash = calculate_chapter_hash(entry_path, is_archive=False)
-                self._register_chapter_with_hash(entry_path, comic_id, comic_rtl_default, chapter_hash, volume_folder)
+                self._reconcile_chapter(entry_path, comic_id, comic_rtl_default, cached, volume_folder)
+
+    def _reconcile_chapter(self, path, comic_id, rtl_default, cached, volume_folder=None, is_archive=False):
+        filename = os.path.join(volume_folder, os.path.basename(path)) if volume_folder else os.path.basename(path)
+        chapter_hash = calculate_chapter_hash(path, is_archive=is_archive, strict=True)
+        previous = cached.get(filename)
+        if previous and previous.content_hash == chapter_hash and previous.is_archive == is_archive:
+            self.chapter_repo.save(previous)
+        elif is_archive:
+            self._register_archive_chapter_with_hash(path, comic_id, rtl_default, chapter_hash, volume_folder)
+        else:
+            self._register_chapter_with_hash(path, comic_id, rtl_default, chapter_hash, volume_folder)
 
     def _register_chapter_with_hash(self, chapter_path, comic_id, comic_rtl_default, content_hash, volume_folder=None):
         """Registra un capitolo da directory con hash"""

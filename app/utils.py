@@ -196,7 +196,7 @@ def calculate_comic_hash(comic_path, strict=False):
     
     return hash_md5.hexdigest()
 
-def calculate_chapter_hash(chapter_path, is_archive=False):
+def calculate_chapter_hash(chapter_path, is_archive=False, strict=False):
     """
     Calcola hash per un singolo capitolo.
     
@@ -215,6 +215,8 @@ def calculate_chapter_hash(chapter_path, is_archive=False):
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_md5.update(chunk)
         except (OSError, IOError):
+            if strict:
+                raise
             # Se non riusciamo a leggere il file, usa solo il nome e la dimensione
             try:
                 stat = os.stat(chapter_path)
@@ -235,6 +237,8 @@ def calculate_chapter_hash(chapter_path, is_archive=False):
                     file_info = f"{img_name}:{stat.st_size}:{stat.st_mtime}"
                     items.append(file_info)
                 except OSError:
+                    if strict:
+                        raise
                     continue
             
             # Aggiungi tutti gli item ordinati
@@ -248,6 +252,8 @@ def calculate_chapter_hash(chapter_path, is_archive=False):
                     hash_md5.update(f.read())
                     
         except Exception as e:
+            if strict:
+                raise
             # Fallback: usa solo il nome della directory
             hash_md5.update(os.path.basename(chapter_path).encode('utf-8'))
     
