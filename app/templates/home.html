@@ -35,6 +35,11 @@
         <a href="#"><i class="fa-solid fa-gear"></i></a>
     </div>
     <div class="content">
+        {% if request.args.get('scan') == 'started' %}
+        <p role="status">Scansione avviata in background.</p>
+        {% elif request.args.get('scan') == 'running' %}
+        <p role="status">Una scansione è già in corso.</p>
+        {% endif %}
         <div class="comics-grid">
             {% for comic in comics %}
             <div class="comic">
