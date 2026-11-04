@@ -1,7 +1,7 @@
 from io import BytesIO
 import os
 import threading
-from flask import render_template, redirect, send_file, url_for, abort, flash, request
+from flask import render_template, redirect, send_file, url_for, abort, flash, request, jsonify
 from app import app, mongo
 from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
@@ -262,6 +262,9 @@ class ComicController:
         try:
             # The database constraint also protects against concurrent writers.
             mongo.db["comics"].create_index("path", unique=True, name="unique_comic_path")
+            mongo.db["scan_status"].update_one(
+                {"_id": "library"}, {"$set": {"state": "running", "message": "Scansione in corso."}}, upsert=True
+            )
         except DuplicateKeyError:
             lock.close()
             logger.error("Cannot start scan: duplicate comic paths exist in the database")
@@ -279,9 +282,18 @@ class ComicController:
                 logger.info("Starting background comic scan...")
                 scanner = OptimizedComicScanner(directory_to_scan, mongo)
                 scanner.scan_and_register_comics()
+                mongo.db["scan_status"].update_one(
+                    {"_id": "library"}, {"$set": {"state": "completed", "message": "Scansione completata."}}
+                )
                 logger.info("Background comic scan completed successfully")
-            except Exception:
+            except Exception as exc:
                 logger.exception("Error during background scan")
+                try:
+                    mongo.db["scan_status"].update_one(
+                        {"_id": "library"}, {"$set": {"state": "failed", "message": str(exc)}}
+                    )
+                except PyMongoError:
+                    logger.exception("Cannot save scan status")
             finally:
                 lock.close()
 
@@ -296,3 +308,11 @@ class ComicController:
         return redirect(url_for('index', scan='started'))
 
 
+
+
+    @app.route('/scan/status')
+    def scan_status():
+        status = mongo.db["scan_status"].find_one({"_id": "library"})
+        if not status:
+            return jsonify(state="idle", message="")
+        return jsonify(state=status.get("state", "idle"), message=status.get("message", ""))

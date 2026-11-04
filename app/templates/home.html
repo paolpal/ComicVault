@@ -35,11 +35,7 @@
         <a href="#"><i class="fa-solid fa-gear"></i></a>
     </div>
     <div class="content">
-        {% if request.args.get('scan') == 'started' %}
-        <p role="status">Scansione avviata in background.</p>
-        {% elif request.args.get('scan') == 'running' %}
-        <p role="status">Una scansione è già in corso.</p>
-        {% endif %}
+        <p id="scan-status" role="status"></p>
         <div class="comics-grid">
             {% for comic in comics %}
             <div class="comic">
@@ -53,6 +49,7 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/fullscreen.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/scan_status.js') }}"></script>
     {% include 'settings.html' %}
 </body>
 </html>

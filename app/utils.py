@@ -145,7 +145,7 @@ def generate_slug(title, language=None, version=None):
     slug = slugify(base)
     return slug
 
-def calculate_comic_hash(comic_path):
+def calculate_comic_hash(comic_path, strict=False):
     """
     Calcola hash per un fumetto basato su metadati e struttura dei file.
     Include tutti i metadata.json (fumetto e capitoli) nel calcolo dell'hash.
@@ -161,7 +161,11 @@ def calculate_comic_hash(comic_path):
     items = []
     metadata_files = []
     
-    for root, dirs, files in os.walk(comic_path):
+    def on_walk_error(error):
+        if strict:
+            raise error
+
+    for root, dirs, files in os.walk(comic_path, onerror=on_walk_error):
         for file in sorted(files):  # Ordine consistente
             file_path = os.path.join(root, file)
             try:
@@ -178,7 +182,8 @@ def calculate_comic_hash(comic_path):
                     file_info = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
                     items.append(file_info)
             except (OSError, ValueError):
-                # Ignora file non accessibili
+                if strict:
+                    raise
                 continue
     
     # Aggiungi prima tutti i metadata.json (ordinati per path)

@@ -2,6 +2,8 @@
 
 import os
 import logging
+import uuid
+from bson import ObjectId
 from app.models import Comic, Chapter
 from app.utils import allowed_file, list_images, extract_metadata_from_filename, load_json, generate_slug, calculate_comic_hash, calculate_chapter_hash
 from app.repositories.mongo.chapter import ChapterRepository
@@ -194,72 +196,87 @@ class OptimizedComicScanner(ComicScanner):
         
         comics_processed = 0
         comics_skipped = 0
-        comics_removed = 0
-        
-        # Prima rimuovi i fumetti che non esistono più sul filesystem
-        comics_removed = self._remove_deleted_comics()
-        
-        for comic_folder in os.listdir(self.root_path):
+        errors = []
+
+        # A missing or unreadable library must never be treated as an empty one.
+        comic_folders = os.listdir(self.root_path)
+        known_comics = self.comic_repo.list_all()
+        marker = self._verify_library(comic_folders, known_comics)
+        for comic_folder in comic_folders:
             comic_path = os.path.join(self.root_path, comic_folder)
             if os.path.isdir(comic_path):
                 try:
-                    # Calcola hash del fumetto
-                    current_hash = calculate_comic_hash(comic_path)
-                    self.logger.info(f"Hash del fumetto {comic_folder}: {current_hash}")
-
-                    # Controlla se il fumetto esiste già nel database
+                    current_hash = calculate_comic_hash(comic_path, strict=True)
                     existing_comic = self.comic_repo.get_by_path(comic_path)
-                    
                     if not existing_comic or existing_comic.content_hash != current_hash:
-                        self.logger.info(f"Processando fumetto modificato: {comic_folder}")
                         self._process_comic_with_hash(comic_path, current_hash)
                         comics_processed += 1
                     else:
-                        self.logger.debug(f"Saltando fumetto non modificato: {comic_folder}")
                         comics_skipped += 1
-                        
-                except Exception as e:
-                    self.logger.error(f"Errore nel processare {comic_folder}: {e}")
-                    # Fallback: processa comunque il fumetto
-                    self._process_comic(comic_path)
-                    comics_processed += 1
-        
-        self.logger.info(f"Scansione completata: {comics_processed} processati, {comics_skipped} saltati, {comics_removed} rimossi")
+                except Exception:
+                    self.logger.exception("Errore nel processare %s", comic_folder)
+                    errors.append(comic_folder)
 
-    def _remove_deleted_comics(self):
-        """Rimuove dal database i fumetti che non esistono più sul filesystem"""
-        removed_count = 0
-        
-        # Ottieni tutti i fumetti dal database
-        all_comics = list(self.comic_repo.list_all())
-        
-        for comic in all_comics:
-            comic_path = comic.path
-            if comic_path and not os.path.exists(comic_path) and comic.id is not None:
-                self.logger.info(f"Rimuovendo fumetto eliminato dal filesystem: {comic.title} ({comic_path})")
-                
-                # Rimuovi prima tutti i capitoli del fumetto
-                self.chapter_repo.delete_by_comic_id(comic.id)
-                
-                # Poi rimuovi il fumetto stesso
-                self.comic_repo.delete(comic.id)
-                
-                removed_count += 1
-        
-        if removed_count > 0:
-            self.logger.info(f"Rimossi {removed_count} fumetti eliminati dal filesystem")
-        
-        return removed_count
+        if errors:
+            raise RuntimeError("Scansione incompleta: impossibile leggere " + ", ".join(errors))
+
+        # Re-read the marker and the directory before deleting anything.
+        current_folders = os.listdir(self.root_path)
+        if self._verify_library(current_folders, known_comics) != marker:
+            raise RuntimeError("La libreria è cambiata durante la scansione.")
+        if set(current_folders) - {".comicvault-library-id"} != set(comic_folders) - {".comicvault-library-id"}:
+            raise RuntimeError("La libreria è cambiata durante la scansione; riprova.")
+        missing = []
+        for comic in known_comics:
+            if not comic.path or comic.id is None:
+                continue
+            try:
+                os.stat(comic.path)
+            except FileNotFoundError:
+                missing.append(comic)
+        # Check every path before removing any records; other filesystem errors
+        # abort the scan and leave the catalog untouched.
+        removed = 0
+        for comic in missing:
+            self.comic_repo.delete(comic.id)
+            removed += 1
+        self.logger.info("Scansione completata: %s processati, %s saltati, %s rimossi", comics_processed, comics_skipped, removed)
+
+    def _verify_library(self, entries, known_comics):
+        """Identify the mounted library before permitting destructive reconciliation."""
+        marker_path = os.path.join(self.root_path, ".comicvault-library-id")
+        settings = self.comic_repo.mongo.db["library_settings"]
+        record = settings.find_one({"_id": "library"})
+        if record:
+            try:
+                with open(marker_path, encoding="utf-8") as marker_file:
+                    marker = marker_file.read().strip()
+            except OSError as exc:
+                raise RuntimeError("Libreria non disponibile: identificativo del disco mancante.") from exc
+            if marker != record["marker"]:
+                raise RuntimeError("Libreria non disponibile: identificativo del disco non corrispondente.")
+            return marker
+
+        # Never initialise a different, empty mount over an existing catalogue.
+        if known_comics and not any(os.path.exists(comic.path) for comic in known_comics if comic.path):
+            raise RuntimeError("Libreria non riconosciuta: nessun fumetto del catalogo è raggiungibile.")
+        if os.path.exists(marker_path):
+            with open(marker_path, encoding="utf-8") as marker_file:
+                marker = marker_file.read().strip()
+            if not marker:
+                raise RuntimeError("Identificativo della libreria vuoto.")
+        else:
+            marker = uuid.uuid4().hex
+            with open(marker_path, "x", encoding="utf-8") as marker_file:
+                marker_file.write(marker)
+        settings.insert_one({"_id": "library", "marker": marker})
+        return marker
 
     def _process_comic_with_hash(self, comic_path, content_hash):
         """Processa un fumetto aggiornando solo i capitoli modificati"""
         comic_id = os.path.basename(comic_path)
 
-        # Rimuovi il fumetto esistente e i suoi capitoli se presente
         existing_comic = self.comic_repo.get_by_path(comic_path)
-        if existing_comic and existing_comic.id is not None:
-            self.chapter_repo.delete_by_comic_id(existing_comic.id)
-            self.comic_repo.delete(existing_comic.id)
 
         # Carica metadati del fumetto
         metadata_path = os.path.join(comic_path, "metadata.json")
@@ -285,14 +302,33 @@ class OptimizedComicScanner(ComicScanner):
             content_hash=content_hash
         )
 
-        logger.info(f"Registrando fumetto: {comic.title} con hash {content_hash}")
-        saved_comic_id = self.comic_repo.save(comic)
+        # Build the entire replacement before changing the database, so a read
+        # failure cannot erase the existing catalog entry.
+        comic_id = existing_comic.id if existing_comic else ObjectId()
+        chapters = []
 
-        # Estrai il valore RTL di default del fumetto
-        comic_rtl_default = metadata.get("rtl", True)
+        class ChapterCollector:
+            def save(self, chapter):
+                chapters.append(chapter.__dict__.copy())
+                return True
 
-        # Processa capitoli con hash individuali
-        self._process_chapters_with_hash(comic_path, saved_comic_id, comic_rtl_default)
+        original_repo = self.chapter_repo
+        try:
+            self.chapter_repo = ChapterCollector()
+            self._process_chapters_with_hash(comic_path, comic_id, metadata.get("rtl", True))
+        finally:
+            self.chapter_repo = original_repo
+
+        comic_data = comic.__dict__.copy()
+        comic_data["chapters"] = chapters
+        if existing_comic:
+            self.comic_repo.mongo.db["comics"].update_one(
+                {"_id": comic_id}, {"$set": comic_data}
+            )
+        else:
+            comic_data["_id"] = comic_id
+            self.comic_repo.mongo.db["comics"].insert_one(comic_data)
+        logger.info("Registrato fumetto: %s", comic.title)
 
     def _process_chapters_with_hash(self, comic_path, comic_id, comic_rtl_default):
         """Processa i capitoli calcolando hash individuali"""
