@@ -7,6 +7,8 @@ from app.models import Comic, Chapter
 from app.repositories.mongo.chapter import ChapterRepository
 from app.repositories.mongo.comic import ComicRepository
 from app.services import ComicScanner, OptimizedComicScanner, ComicService
+from app.services.scan_lock import acquire_scan_lock
+from pymongo.errors import DuplicateKeyError, PyMongoError
 from app.utils import convert_webp
 from PIL import Image
 import logging
@@ -252,22 +254,45 @@ class ComicController:
         Restituisce immediatamente una risposta per evitare timeout.
         """
         directory_to_scan = app.config['COMICS_FOLDER']
-        
+        lock = acquire_scan_lock()
+        if lock is None:
+            logger.info("A comic scan is already running")
+            return redirect(url_for('index', scan='running'))
+
+        try:
+            # The database constraint also protects against concurrent writers.
+            mongo.db["comics"].create_index("path", unique=True, name="unique_comic_path")
+        except DuplicateKeyError:
+            lock.close()
+            logger.error("Cannot start scan: duplicate comic paths exist in the database")
+            return "Cannot start scan: duplicate comic paths exist in the database.", 409
+        except PyMongoError:
+            lock.close()
+            logger.exception("Cannot prepare the comic scan")
+            return "Cannot start scan: database unavailable or index creation failed.", 503
+        except Exception:
+            lock.close()
+            raise
+
         def scan_in_background():
-            """Funzione eseguita in background per la scansione."""
             try:
                 logger.info("Starting background comic scan...")
                 scanner = OptimizedComicScanner(directory_to_scan, mongo)
                 scanner.scan_and_register_comics()
                 logger.info("Background comic scan completed successfully")
-            except Exception as e:
-                logger.error(f"Error during background scan: {e}", exc_info=True)
-        
-        # Avvia la scansione in un thread separato
-        scan_thread = threading.Thread(target=scan_in_background, daemon=True)
-        scan_thread.start()
-        
+            except Exception:
+                logger.exception("Error during background scan")
+            finally:
+                lock.close()
+
+        try:
+            scan_thread = threading.Thread(target=scan_in_background, daemon=True)
+            scan_thread.start()
+        except Exception:
+            lock.close()
+            raise
+
         logger.info("Scan started in background")
-        return redirect(url_for('index'))
+        return redirect(url_for('index', scan='started'))
 
 
